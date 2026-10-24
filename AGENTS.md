@@ -9,14 +9,19 @@
 
 | 项 | 值 |
 |---|---|
-| 仓库 | `github.com/yvdaoyin-ux/cuotitong`，HEAD `2b871c8`，0 未提交；tag `v1.2`；回滚点 `backup-20261024-before-phase3` |
-| 线上 | https://yvdaoyin-ux.github.io/cuotitong/ **已同步 v1.2**（curl 实测 css 含 imgthumb--wide） |
-| 测试 | **257 项全绿**（`node --test tests/*.test.js`：stats 50 / storage 34 / export 33 / render 18 / mathtext 55 / image 36 / symbols 31） |
-| 阶段 | 第二份任务书四阶段 ✅；**第三份任务书（收尾修复+试用准备+OCR 验证）A/B/C1 完成**，C2/C3 等用户实测 |
+| 仓库 | `github.com/yvdaoyin-ux/cuotitong`，OCR/C4 代码提交后紧跟收尾文档提交，0 未提交；tag `v1.2`（v1.3 待真机过审再打）；回滚点 `backup-20261024-before-phase3` |
+| 线上 | https://yvdaoyin-ux.github.io/cuotitong/ **v1.2，无 OCR**（密钥槽恒 null → 识别按钮隐藏；识别功能只在本地 `--ocr-key-file` 构建的单文件里） |
+| 测试 | **282 项全绿**（stats 50 / storage 34 / export 33 / render 18 / mathtext 55 / image 36 / symbols 31 / **ocr 25**） |
+| 阶段 | 第三份任务书 **A/B/C 全部完成**：OCR 验证当日 Go（印刷 5/5 可直接用、中位 982ms、额度达标），C4 已集成；手写组 4 张待用户测 |
 
 **参赛作品全名**：错题通——基于贝叶斯估计与遗忘曲线的薄弱点诊断与智能组卷系统
 
-**下一件事**：①用户发 v1.2 给同学试用（附真机自测清单）②用户提供 OCR 密钥 + 10 张照片跑探针 → Go/No-Go（判据已写死）③10-29 起功能冻结只修 bug。桌面 `错题通.html` 已是 v1.2（旧版在 `错题通-v1.1-备份.html`）。
+**下一件事**：①用户 `node build/make-dist.js --ocr-key-file <key文件>` 出识别版单文件，**真机点一次「识别文字」**确认端到端 ②补 4 张手写（探针即可）③发同学试用 ④10-25~26 真机矩阵 3 格补测 ⑤10-27 晚 OCR 时间盒冻结、过审打 `v1.3` ⑥10-29 起功能冻结只修 bug。
+
+**OCR（C4）硬规矩（2026-10-24 起）**：
+- 密钥只经 `make-dist.js --ocr-key-file` 进**本地单文件**，绝不进 git / GitHub Pages / zip；拿到文件的人可见密钥（混淆不算安全）→ 专用账号、不充值、只用赠送额度。
+- 接口事实（2026-10-24 实测，勿凭印象改）：`file` 必须 **data URL**（纯 base64 = HTTP 400）；`Authorization` 用**裸 key 无 Bearer**；额度护栏每设备每天 **30 次成功识别**，不许调大。
+- 识别结果只**追加**进题干、必须经用户检查删改，绝不静默覆盖；OCR 任何失败只弹提示，不影响录题（照片已存）。
 
 ## 二、开工前必读（按顺序）
 
@@ -91,10 +96,12 @@ node tools/unicode-compat.js
 │   ├── sample-data.js  示例数据（isSample）
 │   ├── stats.js        三个统计模型（纯函数）
 │   ├── export-usage.js 匿名导出（白名单）
+│   ├── ocr.js          OCR 纯逻辑（data URL 强制/响应解析/额度护栏，C4）
+│   ├── ui-ocr.js       识别按钮/同意门/降级（C4，密钥来自 window.QT_OCR_KEY）
 │   └── ui-*.js         各页面（entry 是录题页，刚改过）
 ├── lib/                KaTeX + ECharts + 20 woff2 字体
-├── tests/              5 个测试文件，186 项
-├── tools/              unicode-compat.js 等
+├── tests/              8 个测试文件，282 项
+├── tools/              unicode-compat.js、keystroke-benchmark.js、ocr-probe.html（OCR 探针，不进 dist）
 ├── build/              make-dist.js、set-feedback.js
 ├── dist/               ★ 交付物（单文件 html + 离线 zip）
 └── docs/               算法/系统设计/用户手册/测试报告/分发/汇报

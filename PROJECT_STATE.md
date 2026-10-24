@@ -3,9 +3,25 @@
 > **参赛作品全名**：错题通——基于贝叶斯估计与遗忘曲线的薄弱点诊断与智能组卷系统
 >
 > **每个阶段开始前先读本文件，结束后更新它。** 这是跨会话的长期记忆，不依赖对话上下文。
-> 最后更新：2026-10-24（**v1.2 发布（Claude 第三份任务书 A 部分）+ B/C 部分就绪，等用户实测 OCR**）
+> 最后更新：2026-10-24（**OCR 验证 Go，C4 当日集成完成；手写组 4 张待测，真机端到端待用户确认**）
 
 ---
+
+## OCR 验证 + C4 最小集成已完成（2026-10-24 当日）
+
+**验证结论（详见 `docs/识别尝试记录.md`）：Go**——CORS 通过（curl 预检+正式响应放行 file://，用户探针直连成功）；印刷体 **5/5「可直接用」**（判据 4/5）；中位耗时 **982ms**（判据 ≤8s）；600 张 ≈135 万 tokens ≤ 额度 50%（用户口述「几千万」）。接口事实：**file 必须是 data URL**（纯 base64 一律 HTTP 400）；鉴权**裸 key 无 Bearer** 实测可用；公式返回 `$…$`/`$$…$$` 与主应用 mathtext 直接兼容。手写组 1/1 可直接用，4 张待测（不卡集成）。
+
+| 交付 | 状态 | 验证 |
+|---|---|---|
+| js/ocr.js（纯逻辑：buildRequestBody 强制 data URL / parseResponseText / quotaCheck+quotaRecord / friendlyError） | ✅ | 25 项测试：401 error body 透出、BAD_JSON、30/30 边界、跨天重置、quotaRecord 不可变性 |
+| js/ui-ocr.js（按钮 / 同意门 / 额度读写 / 30s 超时 / 降级提示 / 结果**只追加**进题干） | ✅ | 无头 Edge 冒烟 7/7：按钮露出与隐藏、无照片降级提示、额度 30/30 拦截、全程无 JS 异常 |
+| ui-entry-photo 接线（btn-ocr 槽位 + getBlobForOcr：先新拍池后已入库旧图） | ✅ | 冒烟覆盖；ui-entry.js 499 行未动 |
+| make-dist.js `--ocr-key-file <文件>`（密钥只注入本地单文件；zip/线上/仓库恒为 null） | ✅ | 假 key 注入生效；无 key 构建槽位保持 null；dist/ 在 .gitignore |
+| index.html 注入槽 `window.QT_OCR_KEY = null` | ✅ | 仓库版按钮自动隐藏（冒烟第 6 项实测） |
+
+**安全模型**：密钥只在用户本地构建的单文件里（拿到文件的人可见，混淆不算安全）——专用账号、不充值、只用赠送额度；额度护栏 = **每设备每天 30 次「成功」识别**（失败不计数）；同意门 = 首次点击明确告知照片上传智谱；最坏情况额度用光自动降级纯拍照存图。
+**验证边界（诚实）**：应用内真实网络调用未在冒烟中覆盖（同形 fetch 已由探针实测证明可用）——**待用户拿真 key 构建后真机点一次**。
+**未验证点闭环**：探针首次「两种写法都失败」＝用户当时 API key 贴错（已确认，与方案无关）。
 
 ## v1.2（第三份任务书 A 部分）+ B/C 部分已完成
 
@@ -89,8 +105,11 @@
 
 ```
 03-错题通/dist/
-├── 错题通-单文件.html   1903 KB  ← 单个文件，双击/微信直接打开（v1.2，2026-10-24 实测）
-└── 错题通-离线版.zip     766 KB  ← 解压后打开 index.html（49 文件）
+├── 错题通-单文件.html   1917 KB  ← 无密钥版（识别按钮隐藏，2026-10-24 重建）
+└── 错题通-离线版.zip     773 KB  ← 解压后打开 index.html（51 文件）
+
+带 OCR 的单文件（密钥只在本地产物，不进 git）：
+node build/make-dist.js --ocr-key-file <key文件路径>
 ```
 
 桌面副本：`Desktop/错题通.html` 已是 v1.2；旧版留作 `Desktop/错题通-v1.1-备份.html`。
@@ -116,8 +135,8 @@
 03-错题通/
 ├── index.html              单页入口（经典脚本，不用 module）
 ├── css/app.css             全站样式 + @media print
-├── build/make-dist.js      打包脚本（单文件 + zip，仅用 Node 内置模块）
-├── js/                     19 个模块
+├── build/make-dist.js      打包脚本（单文件 + zip；--ocr-key-file 注入密钥，仅 Node 内置模块）
+├── js/                     21 个模块
 │   ├── util.js             工具 + QT 命名空间 + renderRichText（公式渲染）
 │   ├── config.js           FEEDBACK_URL 等可配置项
 │   ├── data.js             4 科知识点、5 种错因、v1 旧数据对照
@@ -125,6 +144,10 @@
 │   ├── sample-data.js      12 道示例题（带历史作答时间线）
 │   ├── stats.js            三个统计模型（纯函数）
 │   ├── export-usage.js     匿名数据导出（白名单，隐私边界）
+│   ├── mathtext.js         splitMath/normalizeMath/renderRich（公式渲染纯函数）
+│   ├── symbols.js          公式工具栏数据表 + insertAt（阶段 2）
+│   ├── ocr.js              OCR 纯逻辑（data URL 请求体/响应解析/额度护栏，C4）
+│   ├── ui-ocr.js           识别按钮/同意门/降级（C4，密钥来自 window.QT_OCR_KEY）
 │   ├── image-pipeline.js   压缩纯函数 + 浏览器压缩（阶段 3）
 │   ├── image-store.js      ImageStore 内存/IndexedDB 实现 + 孤儿清理（阶段 3）
 │   ├── image-view.js       全屏查看器 + 缩略图注水 + objectURL 管理（阶段 3）
@@ -138,7 +161,7 @@
 │   ├── ui-print.js         打印页（含图片）
 │   └── app.js              路由 + 标签栏 + 页面生命周期 + 图片库初始化
 ├── lib/                    KaTeX + ECharts + 20 个 woff2 字体（1.6 MB）
-├── tests/                  6 个测试文件，222 项
+├── tests/                  8 个测试文件，282 项
 ├── dist/                   ★ 交付物（单文件 html + 离线 zip）
 └── docs/                   算法说明 / 系统设计 / 用户手册 / 测试报告 / 分发说明
 ```
@@ -213,10 +236,10 @@
 | **无头 Edge 旧模式丢 URL** | `--headless` 打开的是 Edge 同步欢迎页，不是命令行里的 file:// | 必须用 `--headless=new`（与 `--user-data-dir` 叠加使用） |
 | **git 身份未配置** | commit 报 `unable to auto-detect email` | 仓库 local 配置 `user.name=Reasonix / user.email=noreply@local`（与历史提交一致） |
 
-## 八、下一步（v1.2 已发布，按第三份任务书时间表）
+## 八、下一步（OCR 已 Go 并集成，按时间表推进）
 
-1. **今天（10-24）**：✅ A/B/C 就绪，v1.2 上线。
-2. **10-25 起**：用户把 `Desktop/错题通.html`（v1.2）发同学开始试用（**试用不等 OCR**），附 `docs/真机自测清单.md` 勾选卡。
-3. **10-25 ~ 10-26**：C1–C3 OCR 验证——**需要用户提供：智谱 API Key + 10 张真实错题照片（5 印刷 5 手写）**；探针 `tools/ocr-probe.html` 本地打开即测；判据已写死在 `docs/识别尝试记录.md`。
-4. **10-27 ~ 10-28**：仅当 Go 才做 C4 集成；No-Go 则整理记录回试用修 bug。时间盒 10-27 晚冻结。
+1. **10-24**：✅ OCR 验证 Go + C4 集成（见上节）。
+2. **10-25**：用户 ①`node build/make-dist.js --ocr-key-file <key文件>` 出识别版单文件，**真机点一次「识别文字」**确认端到端 ②补 4 张手写照片（探针即可）③发同学试用（发 v1.2 还是识别版自定；识别版含密钥，安全模型见 `docs/识别尝试记录.md` 第五节）。
+3. **10-25 ~ 10-26**：真机矩阵 3 格补测（Android Chrome / iOS Safari / 微信内置浏览器），含识别按钮。
+4. **10-27 晚**：OCR 时间盒冻结；真机过审则打 tag `v1.3`。
 5. **10-29 起功能冻结，只修 bug**。选做 G/H/I 已裁定不做。
