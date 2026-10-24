@@ -1,0 +1,11 @@
+# 统一换行：源码用 LF，避免 Windows 下 git 反复警告与 diff 噪音
+* text=auto eol=lf
+
+# 二进制文件，绝不做换行转换（否则字体/压缩包会被改坏）
+*.woff2 binary
+*.woff binary
+*.ttf binary
+*.png binary
+*.jpg binary
+*.zip binary
+*.pdf binary

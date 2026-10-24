@@ -1,0 +1,16 @@
+# 依赖（本项目不用 npm，但如果将来引入请忽略）
+node_modules/
+
+# 打包产物：可以随时用 `node build/make-dist.js` 重新生成，不纳入版本控制
+dist/
+
+# 编辑器 / 系统垃圾
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 临时验证文件
+_tmp-*
+*.log
