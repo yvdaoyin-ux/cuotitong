@@ -127,6 +127,16 @@ function buildSingleFile() {
     '<meta name="generator" content="make-dist.js 单文件内联">\n<title>'
   );
 
+  // 注入一段「打不开怎么办」的提示：只在页面渲染后可见。
+  // 目的是让同学在微信里点开、看到空白/异常时，第一屏就知道该怎么操作。
+  html = html.replace(
+    '<body>',
+    '<body>\n' +
+    '<noscript><div style="padding:16px;font-family:sans-serif;font-size:15px;line-height:1.7">' +
+    '<b>需要开启 JavaScript</b><br>这个工具必须在浏览器里运行，请用手机自带的浏览器打开。' +
+    '</div></noscript>'
+  );
+
   const outPath = path.join(DIST, '错题通-单文件.html');
   fs.writeFileSync(outPath, html, 'utf8');
 
