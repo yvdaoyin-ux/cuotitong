@@ -25,15 +25,26 @@
       '</div>' +
 
       '<div class="card">' +
+        '<div class="label">图片存储</div>' +
+        '<p class="muted" style="margin:0" id="img-usage">统计中…</p>' +
+        '<p class="muted" id="img-warn" hidden style="color:var(--danger);margin:6px 0 0">' +
+          '⚠️ 浏览器数据占用已超过 100MB，建议删掉不需要的错题（会连带删图）。</p>' +
+      '</div>' +
+
+      '<div class="card">' +
         '<div class="label">备份</div>' +
         '<p class="muted" style="margin:0 0 10px">数据只存在本机浏览器里。' +
           '清理浏览器数据、换手机都会丢，建议每周导出一次。</p>' +
         '<div style="display:grid;gap:8px">' +
           '<button class="btn btn--primary btn--block" id="btn-export">⬇️ 导出备份（JSON）</button>' +
+          '<label class="print-opt" style="display:flex;gap:8px;align-items:center">' +
+            '<input type="checkbox" id="exp-imgs">' +
+            '<span style="font-size:14px">连同图片一起备份（体积大、生成慢，默认不含图片）</span>' +
+          '</label>' +
           '<button class="btn btn--block" id="btn-import">⬆️ 从备份恢复</button>' +
           '<input type="file" id="file-import" accept=".json,application/json" hidden>' +
         '</div>' +
-        '<div class="hint">恢复会**整体替换**当前数据，不是合并。</div>' +
+        '<div class="hint">恢复会**整体替换**当前数据，不是合并。含图片的备份会自动识别。</div>' +
       '</div>' +
 
       '<div class="card">' +
@@ -123,12 +134,108 @@
       p(d.getHours()) + p(d.getMinutes());
   }
 
-  function after(el) {
-    el.querySelector('#btn-export').addEventListener('click', function () {
+  /* ---------------- 含图片备份（阶段 3，任务书 3.4） ---------------- */
+
+  var IMAGE_BACKUP_WARN = 20 * 1024 * 1024; // 超过 20MB 先问一声（任务书规定）
+
+  function blobToDataUrl(blob) {
+    return new Promise(function (resolve, reject) {
+      var fr = new FileReader();
+      fr.onload = function () { resolve(String(fr.result)); };
+      fr.onerror = function () { reject(new Error('读取图片失败')); };
+      fr.readAsDataURL(blob);
+    });
+  }
+
+  function dataUrlToBlob(dataUrl) {
+    var comma = dataUrl.indexOf(',');
+    var mime = /data:([^;]+)/.exec(dataUrl.slice(0, comma));
+    var bin = atob(dataUrl.slice(comma + 1));
+    var arr = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    return new Blob([arr], { type: mime ? mime[1] : 'image/jpeg' });
+  }
+
+  /**
+   * 构建备份 JSON。默认只含 qt:db；勾选「含图片」时把图片库逐张转 base64 附上。
+   * @returns {Promise<string>}
+   */
+  async function buildBackup(withImages) {
+    var obj = JSON.parse(QT.storage.exportJson());
+    if (!withImages) return JSON.stringify(obj);
+    var store = await Promise.resolve(QT.imageStoreReady);
+    if (!store) throw new Error('当前环境不支持图片存储，无法生成含图片备份');
+    var recs = await store.getAll();
+    var images = [];
+    for (var i = 0; i < recs.length; i++) {
+      var r = recs[i];
+      if (!r || !r.blob) continue;
+      images.push({
+        id: r.id, qid: r.qid, w: r.w, h: r.h, size: r.size,
+        createdAt: r.createdAt, data: await blobToDataUrl(r.blob)
+      });
+    }
+    obj.images = images;
+    return JSON.stringify(obj);
+  }
+
+  /** 导入含图片备份：先清空图片库，再逐张 base64 还原。返回成功张数。 */
+  async function restoreImages(store, imgs) {
+    await store.clear();
+    var n = 0;
+    for (var i = 0; i < imgs.length; i++) {
+      var r = imgs[i];
+      if (!r || typeof r.id !== 'string' || !r.id) continue;
+      if (typeof r.data !== 'string' || r.data.slice(0, 5) !== 'data:') continue;
       try {
-        download('错题通备份-' + stamp() + '.json', QT.storage.exportJson());
+        var blob = dataUrlToBlob(r.data);
+        await store.put({
+          id: r.id, qid: r.qid || null, blob: blob,
+          w: r.w || 0, h: r.h || 0, size: r.size || blob.size,
+          createdAt: r.createdAt || util.nowIso()
+        });
+        n += 1;
+      } catch (e) { /* 单张坏图跳过，不拖垮整份恢复 */ }
+    }
+    return n;
+  }
+
+  function fmtMB(bytes) {
+    return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+  }
+
+  function after(el) {
+    // —— 图片占用统计（任务书 3.2：navigator.storage.estimate，>100MB 提示）——
+    Promise.resolve(QT.imageStoreReady).then(function (store) {
+      var usageEl = el.querySelector('#img-usage');
+      var warnEl = el.querySelector('#img-warn');
+      if (!usageEl) return;
+      if (!store) { usageEl.textContent = '当前环境不支持图片存储（拍照已停用）。'; return; }
+      store.count().then(function (n) {
+        var est = (navigator.storage && navigator.storage.estimate)
+          ? navigator.storage.estimate() : null;
+        return Promise.resolve(est).then(function (e) {
+          usageEl.textContent = '已存图片 ' + n + ' 张 · 浏览器数据总占用约 ' +
+            (e && e.usage != null ? fmtMB(e.usage) : '未知');
+          if (warnEl) warnEl.hidden = !(e && e.usage > 100 * 1024 * 1024);
+        });
+      }).catch(function () {
+        usageEl.textContent = '图片占用统计失败（不影响使用）。';
+      });
+    });
+
+    // —— 导出备份（默认不含图片；勾选后含图片，>20MB 先确认）——
+    el.querySelector('#btn-export').addEventListener('click', async function () {
+      try {
+        var withImages = el.querySelector('#exp-imgs').checked;
+        var json = await buildBackup(withImages);
+        if (withImages && json.length > IMAGE_BACKUP_WARN) {
+          if (!global.confirm('含图片备份约 ' + fmtMB(json.length) +
+            '，生成与恢复都会比较慢。确定继续？')) return;
+        }
+        download('错题通备份-' + stamp() + '.json', json);
         QT.storage.logEvent('backup_export');
-        util.toast('已导出备份文件');
+        util.toast(withImages ? '已导出含图片备份' : '已导出备份文件');
       } catch (e) {
         util.toast('导出失败：' + (e.message || e), 'error');
       }
@@ -142,12 +249,28 @@
       var f = file.files && file.files[0];
       if (!f) return;
       var reader = new FileReader();
-      reader.onload = function () {
+      reader.onload = async function () {
         try {
           if (!global.confirm('导入会替换当前全部数据，确定继续？')) return;
-          QT.storage.importJson(String(reader.result || ''));
+          var text = String(reader.result || '');
+          // 预解析：含图片备份在 qt:db 之外还带一个 images 数组，
+          // 必须先摘出来单独还原，不能让它混进业务数据
+          var obj = null;
+          try { obj = JSON.parse(text); } catch (e) { /* 交给 importJson 报错 */ }
+          var imgs = (obj && Array.isArray(obj.images)) ? obj.images : null;
+          if (obj && imgs) delete obj.images;
+          QT.storage.importJson(obj ? JSON.stringify(obj) : text);
+          var n = 0;
+          var store = await Promise.resolve(QT.imageStoreReady);
+          if (imgs && store) {
+            n = await restoreImages(store, imgs);
+          }
           QT.storage.logEvent('backup_import');
-          util.toast('已恢复备份');
+          if (imgs && !store) {
+            util.toast('已恢复数据，但当前环境不支持图片，备份里的图片未恢复', 'error');
+          } else {
+            util.toast(imgs ? '已恢复备份（含图片 ' + n + ' 张）' : '已恢复备份');
+          }
           QT.app.go('home');
         } catch (e) {
           util.toast('恢复失败：' + (e.message || e), 'error');
@@ -223,6 +346,10 @@
       if (!global.confirm('这会删除全部错题与作答记录，且无法撤销。确定清空？')) return;
       if (!global.confirm('再次确认：真的要清空吗？建议先导出备份。')) return;
       QT.storage.resetAll();
+      // 图片库一并清空（错题都没了，图留着只会变孤儿）
+      Promise.resolve(QT.imageStoreReady).then(function (s) {
+        if (s) return s.clear();
+      }).catch(function () { /* 交给下次启动的孤儿清理兜底 */ });
       util.toast('已清空');
       QT.app.go('home');
     });

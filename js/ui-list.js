@@ -63,6 +63,10 @@
           (m.reason ? '<span class="badge badge--reason">' + util.esc(QT.data.reasonName(m.reason)) + '</span>' : '') +
         '</div>' +
         '<div class="mcard__text">' + util.renderRichText(util.truncate(m.stem, 160)) + '</div>' +
+        // 阶段 3：带图的题先显示首图缩略图（异步注水，见 image-view.js hydrate）
+        ((m.imageIds && m.imageIds.length)
+          ? '<div class="imgstrip imgstrip--list" data-img-ids="' + util.esc(m.imageIds.join(',')) + '"></div>'
+          : '') +
         '<div class="mcard__meta">' +
           '<span>' + util.esc(util.fmtDate(m.createdAt)) + '</span>' +
           '<span class="mcard__acts">' +
@@ -126,6 +130,9 @@
     var reasonSel = el.querySelector('#f-reason');
     var kpSel = el.querySelector('#f-kp');
 
+    // 异步把错题卡的缩略图灌进来（图片在 IndexedDB 里，取图是异步的）
+    if (QT.imageView) QT.imageView.hydrate(el);
+
     var apply = function (next) {
       var merged = {
         subject: query.subject || '',
@@ -166,5 +173,10 @@
     });
   }
 
-  QT.pages.list = { title: '错题本', render: render, after: after };
+  QT.pages.list = {
+    title: '错题本',
+    render: render,
+    after: after,
+    dispose: function () { if (QT.imageView) QT.imageView.revokeAll(); }
+  };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

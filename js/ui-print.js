@@ -56,16 +56,26 @@
     }).join('');
   }
 
-  /** 单道题的打印排版：题号 + 题干 + 留白。 */
+  /** 单道题的打印排版：题号 + 题干（可空时用来源）+ 图片 + 留白。 */
   function problemHtml(m, i, withAnswer) {
     var names = kpNames(m.kpIds);
+    // v3：题干可空（拍照录题的题），打印时空题干印出来源行；图片是题目本体，必须印
+    var stemHtml = m.stem
+      ? util.renderRichText(m.stem)
+      : (m.source
+        ? '<div class="print-item__source">来源：' + util.esc(m.source) + '（题干见图片）</div>'
+        : '<div class="print-item__source">（本题没有题干文字）</div>');
+    var imgsHtml = (m.imageIds && m.imageIds.length)
+      ? '<div class="print-item__imgs" data-img-ids="' + util.esc(m.imageIds.join(',')) + '"></div>'
+      : '';
     return '' +
       '<div class="print-item">' +
         '<div class="print-item__head">' +
           '<span class="print-item__no">' + (i + 1) + '.</span>' +
           '<span class="print-item__kp">' + util.esc(names.join('、')) + '</span>' +
         '</div>' +
-        '<div class="print-item__stem">' + util.renderRichText(m.stem) + '</div>' +
+        '<div class="print-item__stem">' + stemHtml + '</div>' +
+        imgsHtml +
         '<div class="print-item__space"></div>' +
         (withAnswer
           ? '<div class="print-item__answer">' +
@@ -161,6 +171,9 @@
     var ansBox = el.querySelector('#p-answer');
     if (!subjSel) return; // 空库时没有这些控件
 
+    // 打印卷上的题目图片异步注水
+    if (QT.imageView) QT.imageView.hydrate(el);
+
     subjSel.addEventListener('change', function (ev) {
       QT.app.go('print', { subject: ev.target.value, size: size, withAnswer: withAnswer ? '1' : '' });
     });
@@ -188,5 +201,10 @@
     });
   }
 
-  QT.pages.print = { title: '打印', render: render, after: after };
+  QT.pages.print = {
+    title: '打印',
+    render: render,
+    after: after,
+    dispose: function () { if (QT.imageView) QT.imageView.revokeAll(); }
+  };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

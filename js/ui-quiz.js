@@ -116,12 +116,22 @@
       '<form id="paper-form">' +
         problems.map(function (m, i) {
           var names = kpNames(m.kpIds);
+          // v3：题干可空（拍照/极速录题），空题干显示来源；图片是题目内容的一部分，有就显示
+          var stemHtml = m.stem
+            ? util.renderRichText(m.stem)
+            : (m.source
+              ? '<div class="stem-source">📄 ' + util.esc(m.source) + '<span class="muted">（题干见图片/原文）</span></div>'
+              : '<div class="muted">（本题没有题干文字）</div>');
+          var imgsHtml = (m.imageIds && m.imageIds.length)
+            ? '<div class="imgstrip" data-img-ids="' + util.esc(m.imageIds.join(',')) + '"></div>'
+            : '';
           return '<div class="card" data-qid="' + util.esc(m.id) + '">' +
             '<div class="mcard__head">' +
               '<span class="badge">第 ' + (i + 1) + ' 题</span>' +
               names.map(function (n) { return '<span class="badge">' + util.esc(n) + '</span>'; }).join('') +
             '</div>' +
-            '<div class="mcard__text">' + util.renderRichText(m.stem) + '</div>' +
+            '<div class="mcard__text">' + stemHtml + '</div>' +
+            imgsHtml +
             '<div class="field" style="margin-bottom:10px">' +
               '<label class="label" for="ans-' + util.esc(m.id) + '">我的作答</label>' +
               '<textarea class="textarea" id="ans-' + util.esc(m.id) + '" ' +
@@ -260,6 +270,9 @@
       var form = el.querySelector('#paper-form');
       if (!form) return;
 
+      // 题目图片异步注水（IndexedDB 取图）
+      if (QT.imageView) QT.imageView.hydrate(el);
+
       // 自评：单选，再点一次取消
       form.addEventListener('click', function (ev) {
         var toggle = ev.target.closest('[data-toggle-reveal]');
@@ -350,5 +363,10 @@
     }
   }
 
-  QT.pages.quiz = { title: '组卷', render: render, after: after };
+  QT.pages.quiz = {
+    title: '组卷',
+    render: render,
+    after: after,
+    dispose: function () { if (QT.imageView) QT.imageView.revokeAll(); }
+  };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

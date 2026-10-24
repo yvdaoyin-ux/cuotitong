@@ -507,3 +507,168 @@ html, body {
     margin: 16mm 14mm;
   }
 }
+
+/* ================= 阶段 3：拍照存图 ================= */
+
+/* —— 录题页：拍照按钮 + 缩略图条 —— */
+.photo-actions { display: flex; gap: 8px; margin-bottom: 10px; }
+.photo-actions .btn { flex: 1; min-height: 44px; }
+
+.imgstrip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 8px;
+}
+.imgstrip:empty { min-height: 0; margin: 0; }
+.imgstrip--list { margin-top: 8px; }
+
+.imgthumb-wrap { position: relative; }
+
+.imgthumb {
+  width: 96px;
+  height: 96px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #f2f3f5;
+  overflow: hidden;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.imgthumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.imgthumb__loading { font-size: 14px; color: var(--text-2); }
+
+.imgthumb-del {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--danger);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.stem-source {
+  font-size: 14px;
+  color: var(--text-2);
+  padding: 6px 8px;
+  background: var(--brand-weak, #eef3fe);
+  border-radius: 8px;
+}
+
+/* —— 全屏查看器 —— */
+.imgview {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  background: rgba(0, 0, 0, .92);
+  display: flex;
+  flex-direction: column;
+}
+.imgview[hidden] { display: none; }
+
+.imgview__close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, .18);
+  color: #fff;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.imgview__stage {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  touch-action: none; /* 双指缩放交给 JS，不让浏览器接管 */
+}
+.imgview__img {
+  max-width: 100%;
+  max-height: 100%;
+  transition: transform .12s ease-out;
+}
+
+.imgview__nav {
+  position: absolute;
+  left: 0; right: 0; top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 8px;
+  pointer-events: none;
+}
+.imgview__navbtn {
+  pointer-events: auto;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, .18);
+  color: #fff;
+  font-size: 26px;
+  cursor: pointer;
+}
+.imgview__pos {
+  color: rgba(255, 255, 255, .8);
+  font-size: 14px;
+  background: rgba(0, 0, 0, .4);
+  border-radius: 12px;
+  padding: 4px 10px;
+}
+
+.imgview__bar {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  padding: 12px max(12px, env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-bottom));
+}
+.imgview__act { min-height: 44px; min-width: 120px; }
+
+/* —— 打印：图片不跨页切断、不超出页宽 —— */
+.print-item__imgs { margin-top: 8px; }
+.print-item__imgs .imgthumb {
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  border: none;
+  background: none;
+  cursor: default;
+}
+.print-item__imgs .imgthumb img {
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 60mm;
+  object-fit: contain;
+}
+.print-item__source {
+  font-size: 14px;
+  color: #444;
+  font-style: normal;
+}
+@media print {
+  .print-item__imgs { break-inside: avoid; page-break-inside: avoid; }
+  .print-item__imgs .imgthumb { display: block; margin-bottom: 6px; }
+}

@@ -167,11 +167,8 @@
 
       '<form id="entry-form" novalidate>' +
 
-        // —— 拍照占位（阶段 3 实现，先留位置）——
-        '<div class="card" id="photo-slot" hidden>' +
-          '<div class="label">题目图片</div>' +
-          '<div class="muted">拍照录题将在后续版本开放。</div>' +
-        '</div>' +
+        // —— 拍照 / 相册（阶段 3；极速模式下的首选录入路径）——
+        (QT.entryPhoto ? QT.entryPhoto.html(draft) : '') +
 
         // —— 来源（极速模式的核心字段）——
         '<div class="card">' +
@@ -266,6 +263,9 @@
   function after(el) {
     var form = el.querySelector('#entry-form');
     if (!form) return;
+
+    // 拍照卡（按钮绑定 + 图片库就绪探测 + 编辑态旧图加载都在里面）
+    if (QT.entryPhoto) QT.entryPhoto.attach(el, draft);
 
     var kpBox = el.querySelector('#kp-chips');
     var subjectSel = el.querySelector('#f-subject');
@@ -404,7 +404,7 @@
     }
     el.querySelector('#f-source').addEventListener('input', clearSourceError);
 
-    function doSave(returnToList) {
+    async function doSave(returnToList) {
       var payload = collect();
       // 校验：知识点 ≥1 且（题干/来源/图片至少一项）
       if (!payload.kpIds.length) {
@@ -419,6 +419,7 @@
         if (draft.id) {
           QT.storage.updateMistake(draft.id, payload);
           QT.storage.logEvent('mistake_update', { id: draft.id });
+          if (QT.entryPhoto) await QT.entryPhoto.saveFor(draft.id);
           util.toast('已保存修改');
           QT.app.go('list');
         } else {
@@ -428,12 +429,13 @@
             global.localStorage && global.localStorage.setItem('qt:lastSubject', payload.subject);
           } catch (e) { /* ignore */ }
           QT.storage.logEvent('mistake_add', { subject: m.subject, kpCount: m.kpIds.length });
+          if (QT.entryPhoto) await QT.entryPhoto.saveFor(m.id);
           saveCount += 1;
           if (returnToList) {
             util.toast('已保存第 ' + saveCount + ' 题');
             QT.app.go('list');
           } else {
-            // 保存并继续：保留科目/知识点/错因，清空文本与来源，焦点回来源框
+            // 保存并继续：保留科目/知识点/错因与照片池清空，文本清空，焦点回来源框
             util.toast('已保存第 ' + saveCount + ' 题');
             el.querySelector('#f-source').value = '';
             el.querySelector('#f-stem').value = '';
@@ -443,6 +445,7 @@
               var box = el.querySelector('#prev-' + fid);
               if (box) box.hidden = true;
             });
+            if (QT.entryPhoto) QT.entryPhoto.reset();
             el.querySelector('#f-source').focus();
             global.scrollTo(0, 0);
           }
@@ -470,6 +473,12 @@
       del.addEventListener('click', function () {
         if (!global.confirm('删除后，这道题产生的作答记录也会一并删除，知识点掌握度会重算。确定删除？')) return;
         QT.storage.deleteMistake(draft.id);
+        // 图片连带删除（孤儿清理会兜底，这里即时删让用户立刻看到空间释放）
+        if (QT.imageStoreReady) {
+          QT.imageStoreReady.then(function (s) {
+            if (s) return s.deleteByQid(draft.id);
+          }).catch(function () { /* 清理失败留给下次启动的孤儿清理 */ });
+        }
         QT.storage.logEvent('mistake_delete', { id: draft.id });
         util.toast('已删除');
         QT.app.go('list');
@@ -477,5 +486,14 @@
     }
   }
 
-  QT.pages.entry = { title: '录错题', render: render, after: after };
+  QT.pages.entry = {
+    title: '录错题',
+    render: render,
+    after: after,
+    // 离开页面：释放录题池与全部 objectURL（含查看器里的）
+    dispose: function () {
+      if (QT.entryPhoto) QT.entryPhoto.dispose();
+      if (QT.imageView) QT.imageView.revokeAll();
+    }
+  };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

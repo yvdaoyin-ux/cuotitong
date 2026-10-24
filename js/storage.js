@@ -335,7 +335,9 @@
     var kpIds = Array.isArray(input.kpIds) ? input.kpIds.filter(Boolean) : [];
     var stem = String(input.stem == null ? '' : input.stem).trim();
     var source = String(input.source == null ? '' : input.source).trim();
-    var imageIds = Array.isArray(input.imageIds) ? input.imageIds.filter(Boolean) : [];
+    var imageIds = Array.isArray(input.imageIds)
+      ? input.imageIds.filter(function (id) { return typeof id === 'string' && id; })
+      : [];
 
     if (!kpIds.length) throw new Error('请至少选择一个知识点');
     if (!stem && !source && !imageIds.length) {

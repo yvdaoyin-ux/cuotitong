@@ -118,8 +118,34 @@
     global.addEventListener('hashchange', render);
   }
 
+  /**
+   * 图片库初始化（阶段 3）：
+   * - 结果挂 QT.imageStoreReady（各页面 await 它；null 表示当前环境不支持图片）
+   * - 打不开绝不阻塞主界面，也绝不 reject
+   * - 打开后：申请持久存储（失败不报错）+ 清理孤儿图片（指向已删错题的图）
+   */
+  function initImageStore() {
+    var lib = QT.imageStoreLib;
+    if (!lib) return Promise.resolve(null);
+    return lib.openImageStore().then(function (store) {
+      QT.imageStore = store;
+      if (store) {
+        try {
+          if (global.navigator && navigator.storage && navigator.storage.persist) {
+            navigator.storage.persist().catch(function () { /* 拒绝就算了 */ });
+          }
+        } catch (e) { /* ignore */ }
+        var live = {};
+        QT.storage.load().mistakes.forEach(function (m) { live[m.id] = true; });
+        lib.cleanupOrphans(store, live).catch(function () { /* 下次启动再试 */ });
+      }
+      return store;
+    }).catch(function () { return null; });
+  }
+
   function boot() {
     bindEvents();
+    QT.imageStoreReady = initImageStore();
     QT.storage.logEvent('app_open');
     render();
   }
