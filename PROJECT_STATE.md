@@ -13,12 +13,12 @@
 |---|---|---|
 | 配额 bug 修复（floor + 每级+1 + relaxLevel） | ✅ | n=3..20 实测全合规，独立提交 `efa6520` |
 | schemaVersion 升到 3（source/entryMode/imageIds） | ✅ | 9 项迁移测试，幂等 |
-| js/mathtext.js（splitMath/normalizeMath/isInsideMath/renderRich） | ✅ | 47 项测试 |
+| js/mathtext.js（splitMath/normalizeMath/isInsideMath/renderRich + convertSqrt） | ✅ | 55 项测试 |
 | 录题页：极速模式 + 实时预览 + 三项全空拦截 | ✅ | 浏览器实测 |
-| Unicode 兼容性实测脚本 tools/unicode-compat.js | ✅ | 75/75 符号可直渲染 |
-| 重新打包 + 外部引用 0 | ✅ | 单文件 1815 KB / zip 732 KB |
+| Unicode 兼容性实测脚本 tools/unicode-compat.js | ✅ | 72 无警告 + 3 有警告但渲染一致（∅√′） |
+| 重新打包 + 外部引用 0 | ✅ | 单文件 1816 KB / zip 733 KB |
 
-**测试总数：178 项全部通过**（stats 50 + storage 34 + export 29 + render 18 + mathtext 47）。
+**测试总数：186 项全部通过**（stats 50 + storage 34 + export 29 + render 18 + mathtext 55）。
 
 ## 一、现在能做什么（已完成）
 
