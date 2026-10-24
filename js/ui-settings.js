@@ -41,7 +41,7 @@
         '<p class="muted" style="margin:0 0 8px">如果你愿意，可以导出一份**匿名**使用数据发给开发者。' +
           '它只包含计数与时间，用于写统计报告。</p>' +
         '<div style="background:var(--brand-weak);border-radius:10px;padding:10px 12px;margin-bottom:10px">' +
-          '<div style="font-size:13px;line-height:1.7">' +
+          '<div style="font-size:14px;line-height:1.7">' +
             '<strong>这份文件里没有：</strong><br>' +
             '· 你的题干、我的答案、正确答案与解析<br>' +
             '· 你在作答框里手写的任何解法<br>' +

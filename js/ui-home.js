@@ -70,7 +70,7 @@
           return kp ? kp.name : '未知';
         });
         return '<div style="padding:8px 0;border-bottom:1px solid var(--line)">' +
-          '<div class="muted" style="font-size:12px">第 ' + (i + 1) + ' 道 · ' +
+          '<div class="muted" style="font-size:14px">第 ' + (i + 1) + ' 道 · ' +
             names.map(util.esc).join('、') + '</div>' +
           '<div style="font-size:14px">' +
             util.renderRichText(util.truncate(r.mistake.stem, 80)) + '</div>' +
@@ -117,15 +117,15 @@
         o.weak.map(function (w) {
           var value = w.sufficient
             ? '<strong>' + Math.round(w.mastery * 100) + '%</strong>' +
-              '<div class="muted" style="font-size:12px">' +
+              '<div class="muted" style="font-size:14px">' +
                 Math.round(w.low * 100) + '%–' + Math.round(w.high * 100) + '%</div>'
             : '<span class="muted">数据不足</span>' +
-              '<div class="muted" style="font-size:12px">样本 ' + w.n + '/' +
+              '<div class="muted" style="font-size:14px">样本 ' + w.n + '/' +
                 QT.stats.CONFIG.minSamples + '</div>';
           return '<div style="display:flex;justify-content:space-between;align-items:center;' +
               'gap:8px;padding:8px 0;border-bottom:1px solid var(--line)">' +
             '<div><div>' + util.esc(w.name) + '</div>' +
-              '<div class="muted" style="font-size:12px">' +
+              '<div class="muted" style="font-size:14px">' +
                 util.esc(QT.data.subjectName(w.subject)) + ' · ' + w.n + ' 次作答</div></div>' +
             '<div style="text-align:right;white-space:nowrap">' + value + '</div>' +
           '</div>';
@@ -140,11 +140,11 @@
 
       '<div class="card" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center">' +
         '<div><div style="font-size:24px;font-weight:700">' + o.mistakeCount + '</div>' +
-          '<div class="muted" style="font-size:12px">错题</div></div>' +
+          '<div class="muted" style="font-size:14px">错题</div></div>' +
         '<div><div style="font-size:24px;font-weight:700">' + o.kpCount + '</div>' +
-          '<div class="muted" style="font-size:12px">涉及知识点</div></div>' +
+          '<div class="muted" style="font-size:14px">涉及知识点</div></div>' +
         '<div><div style="font-size:24px;font-weight:700">' + o.dueCount + '</div>' +
-          '<div class="muted" style="font-size:12px">待复习</div></div>' +
+          '<div class="muted" style="font-size:14px">待复习</div></div>' +
       '</div>' +
 
       reviewCard(o) +

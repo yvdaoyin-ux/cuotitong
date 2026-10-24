@@ -121,7 +121,7 @@
       return '<span class="muted">数据不足（' + st.n + '/' + QT.stats.CONFIG.minSamples + '）</span>';
     }
     return '<strong>' + Math.round(st.mastery * 100) + '%</strong> ' +
-      '<span class="muted" style="font-size:12px">' +
+      '<span class="muted" style="font-size:14px">' +
         Math.round(st.low * 100) + '–' + Math.round(st.high * 100) + '%</span>';
   }
 
@@ -262,7 +262,7 @@
             'gap:8px;padding:9px 0;border-bottom:1px solid var(--line)">' +
           '<div style="min-width:0">' +
             '<div>' + util.esc(r.name) + '</div>' +
-            '<div class="muted" style="font-size:12px">' +
+            '<div class="muted" style="font-size:14px">' +
               util.esc(QT.data.subjectName(r.subject)) +
               (tr ? ' · 主要错因：' + util.esc(tr.name) : '') +
               ' · 错' + r.state.wrong + '/对' + r.state.correct +

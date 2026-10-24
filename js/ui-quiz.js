@@ -178,9 +178,9 @@
               '<div style="min-width:0">' +
                 '<div>' + util.esc(r.kp.name) + '</div>' +
                 (unreliable
-                  ? '<div class="muted" style="font-size:12px">数据不足（' + r.st.n + '/' +
+                  ? '<div class="muted" style="font-size:14px">数据不足（' + r.st.n + '/' +
                       QT.stats.CONFIG.minSamples + '），仅供参考</div>'
-                  : '<div class="muted" style="font-size:12px">' +
+                  : '<div class="muted" style="font-size:14px">' +
                       Math.round(r.st.low * 100) + '%–' + Math.round(r.st.high * 100) + '%</div>') +
               '</div>' +
               '<div style="text-align:right;white-space:nowrap">' +

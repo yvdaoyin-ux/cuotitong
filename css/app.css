@@ -145,7 +145,7 @@ html, body {
 }
 
 .hint {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-2);
   margin-top: 6px;
 }
@@ -209,7 +209,7 @@ html, body {
 
 .badge {
   display: inline-block;
-  font-size: 12px;
+  font-size: 14px;
   line-height: 20px;
   padding: 0 8px;
   border-radius: 6px;
@@ -237,7 +237,7 @@ html, body {
 }
 
 .mcard__meta {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-2);
   display: flex;
   justify-content: space-between;
@@ -273,7 +273,7 @@ html, body {
   border: 0;
   background: none;
   color: var(--text-2);
-  font-size: 12px;
+  font-size: 14px;
   font-family: inherit;
   cursor: pointer;
 }
@@ -365,7 +365,7 @@ html, body {
 }
 
 .print-head__meta {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-2);
   margin-top: 6px;
 }
@@ -376,7 +376,7 @@ html, body {
   display: flex;
   gap: 8px;
   align-items: baseline;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-2);
   margin-bottom: 4px;
 }
