@@ -17,7 +17,11 @@
 
   /* ---------------- 抽题 ---------------- */
 
-  /** 先算状态 → 建候选 → 加权无放回抽样。 */
+  /**
+   * 先算状态 → 建候选 → 加权无放回抽样。
+   * 返回值是 Array，并挂上 `.relaxLevel`（由 weightedSample 透传），
+   * 供试卷页提示「因错题覆盖知识点较少，已放宽单知识点占比上限」。
+   */
   function draw(subject, size) {
     var db = QT.storage.load();
     var now = util.nowIso();
@@ -27,7 +31,9 @@
     var picked = QT.stats.weightedSample(candidates, size);
     var byId = {};
     db.mistakes.forEach(function (m) { byId[m.id] = m; });
-    return picked.map(function (c) { return byId[c.id]; }).filter(Boolean);
+    var out = picked.map(function (c) { return byId[c.id]; }).filter(Boolean);
+    out.relaxLevel = picked.relaxLevel || 0;
+    return out;
   }
 
   function parseIds(str) {
@@ -98,6 +104,14 @@
     return '' +
       '<h1 class="page-title">' + (isReview ? '今日复习' : '练习中') + '</h1>' +
       '<p class="page-sub">共 ' + problems.length + ' 题 · 做完后逐题自评对错</p>' +
+      // 放宽提示：单知识点占比可能超过 40%，必须明确告知，否则用户会以为承诺失效
+      (Number(query.relax) > 0
+        ? '<div class="card" style="background:#fff7e6;border:1px solid #f0d9a8">' +
+            '<div style="font-size:14px;line-height:1.6">' +
+              '⚠️ 因错题覆盖的知识点较少，已放宽单一知识点的占比上限' +
+              '（本题库不足以在 40% 限制内凑满 ' + problems.length + ' 道）。' +
+            '</div></div>'
+        : '') +
 
       '<form id="paper-form">' +
         problems.map(function (m, i) {
@@ -234,7 +248,9 @@
           subject: subject,
           size: size,
           stage: 'paper',
-          ids: picked.map(function (m) { return m.id; }).join(',')
+          ids: picked.map(function (m) { return m.id; }).join(','),
+          // 放宽级别写进 URL：试卷页刷新后仍能显示提示，且不影响抽样结果
+          relax: picked.relaxLevel ? String(picked.relaxLevel) : ''
         });
       });
       return;

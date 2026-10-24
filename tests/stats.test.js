@@ -313,6 +313,7 @@ group('3.3 组卷 · 加权无放回抽样', () => {
     const picked = S.weightedSample(cands, 10);
     const bigCount = picked.filter((p) => p.kpIds.indexOf('big') >= 0).length;
     assert.ok(bigCount <= 4, '同一知识点最多 4 道，实际 ' + bigCount);
+    assert.strictEqual(picked.relaxLevel, 0, '知识点充足时不应放宽');
   });
 
   test('配额凑不满时放宽而不是返回不足（错题只集中在 2 章的真实场景）', () => {
@@ -322,6 +323,9 @@ group('3.3 组卷 · 加权无放回抽样', () => {
     const picked = S.weightedSample(cands, 10);
     assert.strictEqual(picked.length, 10, '应放宽配额凑满 10 道');
     assert.strictEqual(new Set(picked.map((p) => p.id)).size, 10);
+    // 只有 2 个知识点，必然触发放宽 —— 必须如实标记，否则界面无法提示用户
+    assert.ok(picked.relaxLevel > 0, '放宽时必须标记 relaxLevel，实际 ' + picked.relaxLevel);
+    assert.ok(picked.relaxLevel <= 2, '最多放宽两级，实际 ' + picked.relaxLevel);
   });
 
   test('多知识点题目：任一知识点超配额即排除', () => {
@@ -349,6 +353,91 @@ group('3.3 组卷 · 加权无放回抽样', () => {
       if (S.weightedSample(cands, 1)[0].id === 'zero') zero += 1;
     }
     assert.ok(zero > 420 && zero < 580, '应各约一半，实际 zero=' + zero);
+  });
+
+  /* ---------- 配额 bug 回归（2026-10-24 修复，Claude 指出） ----------
+   * 旧实现用 Math.ceil(n*0.4)：n=1..20 中 14 个取值突破 40%
+   * （n=3 时 66.7%、n=4/6/8 时 50%），只有 n 是 5 的倍数才恰好 40%。
+   * 而 5/10/15/20 正是 CONFIG.quizSizes 预设，所以按预设题数测永远发现不了。
+   */
+
+  /** 固定种子的线性同余随机数发生器，保证测试可复现。 */
+  function seededRng(seed) {
+    let s = seed >>> 0;
+    return function () {
+      s = (s * 1664525 + 1013904223) >>> 0;
+      return s / 4294967296;
+    };
+  }
+
+  test('n=3..20 逐一验证：单知识点占比不超过 40%（relaxLevel=0 时）', () => {
+    // 构造：1 个「大」知识点 20 道 + 20 个各自独立的小知识点，保证配额能抽满
+    const violations = [];
+    for (let n = 3; n <= 20; n++) {
+      const cands = [];
+      for (let i = 0; i < 20; i++) cands.push({ id: 'big' + i, kpIds: ['BIG'], weight: 10 });
+      for (let i = 0; i < 20; i++) cands.push({ id: 's' + i, kpIds: ['S' + i], weight: 0.01 });
+
+      for (let trial = 0; trial < 20; trial++) {
+        const picked = S.weightedSample(cands, n, { rng: seededRng(n * 100 + trial) });
+        assert.strictEqual(picked.relaxLevel, 0, 'n=' + n + ' 知识点充足，不应放宽');
+        const bigCount = picked.filter((p) => p.kpIds.indexOf('BIG') >= 0).length;
+        const ratio = bigCount / picked.length;
+        if (ratio > 0.4 + 1e-9) {
+          violations.push('n=' + n + ' 占比 ' + (ratio * 100).toFixed(1) + '%');
+        }
+      }
+    }
+    assert.deepStrictEqual(violations, [], '以下取值突破 40%：' + violations.join('、'));
+  });
+
+  test('n=2 时 cap=1，两道题来自不同知识点即满足', () => {
+    const cands = [
+      { id: 'a1', kpIds: ['A'], weight: 5 },
+      { id: 'a2', kpIds: ['A'], weight: 5 },
+      { id: 'b1', kpIds: ['B'], weight: 1 },
+      { id: 'b2', kpIds: ['B'], weight: 1 }
+    ];
+    for (let trial = 0; trial < 50; trial++) {
+      const picked = S.weightedSample(cands, 2, { rng: seededRng(trial + 1) });
+      const aCount = picked.filter((p) => p.kpIds.indexOf('A') >= 0).length;
+      // cap=1，所以 A 只能被抽 1 道 → 两道题必然来自不同知识点
+      assert.ok(aCount <= 1, 'n=2 时同一知识点最多 1 道，实际 ' + aCount);
+    }
+  });
+
+  test('放宽时每级只 +1，不会从 4 直接跳到 8（旧 bug 的回归保护）', () => {
+    // 只有 2 个大知识点、各 10 道，抽 10 道 → 必然放宽
+    const cands = [];
+    for (let i = 0; i < 10; i++) cands.push({ id: 'p' + i, kpIds: ['P'], weight: 1 });
+    for (let i = 0; i < 10; i++) cands.push({ id: 'q' + i, kpIds: ['Q'], weight: 1 });
+
+    const picked = S.weightedSample(cands, 10, { rng: seededRng(42) });
+    assert.strictEqual(picked.length, 10);
+    const pCount = picked.filter((x) => x.kpIds.indexOf('P') >= 0).length;
+    const qCount = picked.length - pCount;
+    // floor(10*0.4)=4，放宽一级 cap=5，二级 cap=6。
+    // 旧实现 cap += perKpCap 会变成 8，导致单知识点可占 80%。
+    assert.ok(pCount <= 6 && qCount <= 6,
+      '放宽后单知识点最多 6 道，实际 P=' + pCount + ' Q=' + qCount);
+    assert.ok(picked.relaxLevel > 0, '应标记放宽');
+  });
+
+  test('知识点充足时 relaxLevel 恒为 0', () => {
+    // 20 个知识点各 1 道，抽 10 道 —— 配额 4 完全够用
+    const cands = [];
+    for (let i = 0; i < 20; i++) cands.push({ id: 'k' + i, kpIds: ['K' + i], weight: 1 });
+    for (let trial = 0; trial < 30; trial++) {
+      const picked = S.weightedSample(cands, 10, { rng: seededRng(trial + 7) });
+      assert.strictEqual(picked.relaxLevel, 0);
+    }
+  });
+
+  test('请求 0 道时 relaxLevel 为 0 且返回空数组', () => {
+    const cands = [{ id: 'a', kpIds: ['A'], weight: 1 }];
+    const picked = S.weightedSample(cands, 0);
+    assert.strictEqual(picked.length, 0);
+    assert.strictEqual(picked.relaxLevel, 0);
   });
 
   test('抽样不修改输入的候选数组', () => {

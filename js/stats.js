@@ -237,34 +237,55 @@
    * 每题权重 = 其各知识点复习优先级的均值 + ε。
    *   ε 的作用：优先级可能为 0（刚答对且掌握度很高），加 ε 后仍有被抽中的机会，
    *   否则强者恒强、弱者永远不复习到，这违背「查漏补缺」的目标。
-   * 知识点配额：任一知识点被抽中的题目数 ≤ ceil(总题数 × 40%)，防止一张卷全是同一章。
+   * 知识点配额：任一知识点被抽中的题目数 ≤ floor(总题数 × 40%)，防止一张卷全是同一章。
+   *
+   * ⚠️ 配额为什么必须用 floor 而不是 ceil（此处曾经有过 bug，勿改回）：
+   *   ceil 会让小样本必然超标——n=3 时 ceil(1.2)=2，单知识点就占 66.7%；
+   *   n=4/6/8 时更是 50%。而且**只有 n 是 5 的倍数时才恰好 40%**，
+   *   5/10/15/20 正是 CONFIG.quizSizes 的预设值，所以按预设题数测永远发现不了。
+   *   改用 floor 后 n≥3 全部 ≤40%（n=1、2 见下方说明）。
    * ============================================================ */
 
   /**
    * 加权无放回抽样。
+   *
+   * 返回值是 Array，另挂一个 `relaxLevel` 属性（0/1/2），表示为了凑够题数
+   * 把「单知识点配额」放宽了几级。调用方应先读它，>0 时在界面上提示用户，
+   * 否则用户会以为 40% 的承诺失效了。
+   * （用挂属性而不是改返回结构，是为了不破坏既有调用方与测试。）
+   *
    * @param {Array<{id:string, weight:number, kpIds:string[]}>} candidates
    * @param {number} k 抽几道
    * @param {object} [opts] {rng, maxPerKp}
-   * @returns {Array} 抽中的候选（保持输入顺序无关）
+   * @returns {Array} 抽中的候选（保持输入顺序无关），`.relaxLevel` 见上
    */
   function weightedSample(candidates, k, opts) {
     opts = opts || {};
     var rng = typeof opts.rng === 'function' ? opts.rng : Math.random;
     var pool = (candidates || []).slice();
     var n = Math.min(Math.max(0, Math.floor(k)), pool.length);
-    if (n === 0) return [];
+    if (n === 0) {
+      var empty = [];
+      empty.relaxLevel = 0;
+      return empty;
+    }
 
     var c = cfg();
+    // floor + 下限 1：
+    //   n≥3 时保证 ≤40%（n=3→1 道 33.3%，n=5→2 道 40%，n=10→4 道 40%）
+    //   n=2 时 cap=1，即 50%，但两道题来自不同知识点即可满足，属正常
+    //   n=1 时 cap=1，100%，无可避免（只有一道题）
     var perKpCap = opts.maxPerKp != null
       ? opts.maxPerKp
-      : Math.max(1, Math.ceil(n * c.maxSameKpRatio));
+      : Math.max(1, Math.floor(n * c.maxSameKpRatio));
 
     var picked = [];
     var kpCount = {};
-    // 放宽配额的两轮策略：先按配额抽，抽不满再放宽到「至少 1 道」，
-    // 保证「选了 10 道题但错题本只有 3 章」这种真实情况下也能凑够题。
+    // 放宽策略：先按配额抽，抽不满再逐级 +1，最多两级。
+    // 这样不会从 4 直接跳到 8（旧实现 `cap += perKpCap` 的错误就在于此）。
     var cap = perKpCap;
-    var relaxTried = 0;
+    var relaxLevel = 0;
+    var MAX_RELAX = 2;
 
     while (picked.length < n && pool.length > 0) {
       // 过滤掉会超配额的候选
@@ -272,9 +293,9 @@
         return (m.kpIds || []).every(function (id) { return (kpCount[id] || 0) < cap; });
       });
       if (eligible.length === 0) {
-        if (relaxTried >= 2) break; // 已经放宽两级，凑不满就返回实际的数目
-        relaxTried += 1;
-        cap += Math.max(1, perKpCap); // 逐级放宽
+        if (relaxLevel >= MAX_RELAX) break; // 已放宽到上限，凑不满就返回实际数目
+        relaxLevel += 1;
+        cap += 1; // 每级只 +1，绝不悄悄突破一大截
         continue;
       }
 
@@ -300,6 +321,8 @@
       pool = pool.filter(function (m) { return m.id !== chosen.id; });
     }
 
+    // 把放宽级别挂在数组上：调用方据此提示用户「本卷已放宽单知识点上限」
+    picked.relaxLevel = relaxLevel;
     return picked;
   }
 
