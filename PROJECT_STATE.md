@@ -3,9 +3,24 @@
 > **参赛作品全名**：错题通——基于贝叶斯估计与遗忘曲线的薄弱点诊断与智能组卷系统
 >
 > **每个阶段开始前先读本文件，结束后更新它。** 这是跨会话的长期记忆，不依赖对话上下文。
-> 最后更新：2026-10-24（**第二份任务书「录题效率专项」阶段 3（拍照存图）完成**）
+> 最后更新：2026-10-24（**第二份任务书全部四阶段完成，v1.1 已发布上线**）
 
 ---
+
+## 阶段 2 + 阶段 4（公式工具栏 / 埋点·基准·文档·发布）已完成
+
+| 交付 | 状态 | 验证 |
+|---|---|---|
+| js/symbols.js（94 符号 6 分组 + insertAt 纯函数） | ✅ | 26 项测试，**94 个符号逐个 KaTeX 渲染** |
+| js/ui-toolbar.js（面板/最近使用/visualViewport 跟随/撤销/防收键盘） | ✅ | 浏览器实测：出现/焦点/预览同步/切换分组 |
+| 保存前残留 ▮ 确认 + 复制为新题（阶段 1 遗留项补齐） | ✅ | 浏览器实测 confirm 拦截与放行、copyFrom 带科目知识点清内容 |
+| js/entry-metrics.js（entry_open/entry_save，载荷只有计数无文本） | ✅ | 浏览器实测载荷 8 字段；4 项隐私测试 |
+| tools/keystroke-benchmark.js（真实模拟） | ✅ | 5 题全过：手打 278 键 vs 工具栏 24 点击+70 字符+6 光标移动 |
+| **基准脚本抓到 2 个 insertAt 真 bug**（多占位符光标偏移、auto-$ 后光标在公式外） | ✅ 已修 | 回归测试锁定 |
+| 四份文档（录入效率说明/系统设计输入子系统/用户手册/测试报告增补） | ✅ | 见 docs/ |
+| 打包 1898 KB 外部引用 0 + **push `9036b8c` + tag `v1.1` 已上线** | ✅ | curl 200 且线上可拉到 symbols.js |
+
+**测试总数：252 项全部通过**（stats 50 / storage 34 / export 33 / render 18 / mathtext 55 / image 36 / symbols 26）。
 
 ## 阶段 3（拍照存图）已完成
 
@@ -60,8 +75,8 @@
 
 ```
 03-错题通/dist/
-├── 错题通-单文件.html   1866 KB  ← 单个文件，双击/微信直接打开（2026-10-24 实测）
-└── 错题通-离线版.zip     752 KB  ← 解压后打开 index.html（46 文件）
+├── 错题通-单文件.html   1898 KB  ← 单个文件，双击/微信直接打开（v1.1，2026-10-24 实测）
+└── 错题通-离线版.zip     764 KB  ← 解压后打开 index.html（49 文件）
 ```
 
 重新生成：`cd 03-错题通 && node build/make-dist.js`
@@ -182,11 +197,9 @@
 | **无头 Edge 旧模式丢 URL** | `--headless` 打开的是 Edge 同步欢迎页，不是命令行里的 file:// | 必须用 `--headless=new`（与 `--user-data-dir` 叠加使用） |
 | **git 身份未配置** | commit 报 `unable to auto-detect email` | 仓库 local 配置 `user.name=Reasonix / user.email=noreply@local`（与历史提交一致） |
 
-## 八、下一步
+## 八、下一步（第二份任务书已全部完成）
 
-1. **阶段 4（埋点 + 基准脚本 + 文档 + 发布）**：按第二份任务书 4.1–4.4 执行；其中 4.3 组卷配额已在阶段 1 提前完成（`efa6520`）。
-2. **真机矩阵补测**：Android Chrome / iOS Safari / 微信内置浏览器三格「未测」，需要真机（清单见 `docs/阶段3完成汇报.md`）。
-3. **push 决策**：阶段 3 完成后本地 HEAD `8ba991a`，线上仍是阶段 1 版本；推不推等用户确认（代理用法：`HTTPS_PROXY=http://127.0.0.1:7890 git push` 单条命令内临时）。
-4. **拿真实反馈**：把 `dist/错题通-单文件.html` 发同学，一周后收反馈。
-5. **填问卷链接**：`js/config.js` 的 `FEEDBACK_URL`，填完重新 `node build/make-dist.js`。
-6. **D7 后只修 bug**，不加功能。
+1. **真机矩阵补测**：Android Chrome / iOS Safari / 微信内置浏览器三格「未测」（清单建议见 `docs/阶段3完成汇报.md` 第五节）。
+2. **收真实反馈**：把 `dist/错题通-单文件.html`（1898 KB，v1.1）发同学；埋点已就位（`entry_save` 的 ms/mode/toolbarTaps/usedPhoto），一周后让同学「导出使用数据」发回，数据进报告「应用情况」。
+3. **填问卷链接**：`js/config.js` 的 `FEEDBACK_URL`，填完 `node build/set-feedback.js "链接"` → commit → 代理 push。
+4. **D7 后只修 bug 不加功能**（任务书第 4 节）。选做 G/H/I 需用户确认后才允许做。

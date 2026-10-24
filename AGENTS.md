@@ -9,14 +9,14 @@
 
 | 项 | 值 |
 |---|---|
-| 仓库 | `github.com/yvdaoyin-ux/cuotitong`，HEAD `8ba991a`（阶段 3），0 未提交；回滚点 tag `backup-20261024-before-phase3` |
-| 线上 | https://yvdaoyin-ux.github.io/cuotitong/ （**仍是阶段 1 版本，阶段 3 未 push，待用户确认**） |
-| 测试 | **222 项全绿**（`node --test tests/*.test.js`，stats 50 / storage 34 / export 29 / render 18 / mathtext 55 / image 36） |
-| 阶段 | 第二份任务书「录题效率专项」**阶段 1、3 已完成**，**阶段 4（埋点/基准/文档/发布）待开工** |
+| 仓库 | `github.com/yvdaoyin-ux/cuotitong`，HEAD `9036b8c`（v1.1），0 未提交；回滚点 tag `backup-20261024-before-phase3` |
+| 线上 | https://yvdaoyin-ux.github.io/cuotitong/ **已同步 v1.1**（curl 200 + 线上可拉到 symbols.js 实测） |
+| 测试 | **252 项全绿**（`node --test tests/*.test.js`：stats 50 / storage 34 / export 33 / render 18 / mathtext 55 / image 36 / symbols 26） |
+| 阶段 | 第二份任务书**全部四阶段完成**（1 输入基础设施 / 2 公式工具栏 / 3 拍照存图 / 4 埋点·基准·文档·发布），tag `v1.1` |
 
 **参赛作品全名**：错题通——基于贝叶斯估计与遗忘曲线的薄弱点诊断与智能组卷系统
 
-**下一件事**：阶段 3 汇报已交（`docs/阶段3完成汇报.md`），等用户确认 4 个待决问题（真机自测清单 / 相册多选 / 是否 push / 阶段 4 开工）后进阶段 4。
+**下一件事**：①真机补测三格「未测」（Android/iOS/微信）②发单文件收真实反馈（埋点已就位）③等用户给问卷链接。**D7 后只修 bug 不加功能**；选做 G/H/I 需用户确认。
 
 ## 二、开工前必读（按顺序）
 
