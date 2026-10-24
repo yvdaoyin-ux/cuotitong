@@ -9,21 +9,22 @@
 
 | 项 | 值 |
 |---|---|
-| 仓库 | `github.com/yvdaoyin-ux/cuotitong`，HEAD `1dfcd66`，0 未提交 |
-| 线上 | https://yvdaoyin-ux.github.io/cuotitong/ |
-| 测试 | **186 项全绿**（`node --test tests/*.test.js`，stats 50 / storage 34 / export 29 / render 18 / mathtext 55） |
-| 阶段 | 第二份任务书「录题效率专项」**阶段 1 已完成**，**阶段 3（拍照存图）待开工** |
+| 仓库 | `github.com/yvdaoyin-ux/cuotitong`，HEAD `8ba991a`（阶段 3），0 未提交；回滚点 tag `backup-20261024-before-phase3` |
+| 线上 | https://yvdaoyin-ux.github.io/cuotitong/ （**仍是阶段 1 版本，阶段 3 未 push，待用户确认**） |
+| 测试 | **222 项全绿**（`node --test tests/*.test.js`，stats 50 / storage 34 / export 29 / render 18 / mathtext 55 / image 36） |
+| 阶段 | 第二份任务书「录题效率专项」**阶段 1、3 已完成**，**阶段 4（埋点/基准/文档/发布）待开工** |
 
 **参赛作品全名**：错题通——基于贝叶斯估计与遗忘曲线的薄弱点诊断与智能组卷系统
 
-**下一件事**：阶段 3（拍照存图）。但先读 `PROJECT_STATE.md` 和 `docs/阶段1完成汇报.md`，特别是汇报里「需要你决定什么」那节已经由 Claude 裁定过的问题。
+**下一件事**：阶段 3 汇报已交（`docs/阶段3完成汇报.md`），等用户确认 4 个待决问题（真机自测清单 / 相册多选 / 是否 push / 阶段 4 开工）后进阶段 4。
 
 ## 二、开工前必读（按顺序）
 
 1. **`PROJECT_STATE.md`** —— 当前状态、已完成功能、数据结构、坑表（最该先读）
-2. **`docs/阶段1完成汇报.md`** —— 阶段 1 做了什么、怎么验证、Claude 的四处更正与裁定
-3. **`docs/致Claude的核验请求.md`** —— 7 处偏离任务书的裁定记录
-4. 桌面 `progress/CURRENT.md` —— 全局状态（含其他项目）
+2. **`docs/阶段3完成汇报.md`** —— 阶段 3 做了什么、怎么验证、对任务书的 6 处调整、待决问题
+3. **`docs/阶段1完成汇报.md`** —— 阶段 1 做了什么、怎么验证、Claude 的四处更正与裁定
+4. **`docs/致Claude的核验请求.md`** —— 7 处偏离任务书的裁定记录
+5. 桌面 `progress/CURRENT.md` —— 全局状态（含其他项目）
 
 ## 三、三条不可违反的铁律
 
@@ -35,15 +36,15 @@
    - 本文件 `AGENTS.md` 只有动了规矩/结构才改
 3. **不写"应该没问题"**；不确定就标「未验证」。**密钥不落盘**。
 
-## 四、阶段 3（拍照存图）的关键约束（来自第二份任务书 + Claude 补充）
+## 四、阶段 3（拍照存图）的关键约束（已完成，保留供阶段 4 参考）
 
-- 极速模式下照片是首选路径：拍完立即原位显示缩略图，点击可重拍或删除。
-- 「保存并继续」之后，照片清空，其余保留（与文本一致）。
-- 真机矩阵（Android Chrome / iOS Safari / 微信内置浏览器 / 单文件 html）没测过的格子写「未测」，**不允许猜**。
-- 压缩逻辑（长边 ≤1280px、JPEG 0.72→0.5）、`ImageStore` 内存实现、降级测试，按任务书第 3 节原样执行。
-- **数据只增不改**：`schemaVersion` 已是 3，字段 `source`/`entryMode`/`imageIds` 已就位；图片存 IndexedDB（`qt-images`），**不放 localStorage**。
-- 新增文件每个 ≤400 行；阶段 2 的工具栏将来写在 `ui-toolbar.js`，`ui-entry.js` 之后不超过 500 行。
-- 界面文字 ≥14px、可点区域 ≥40px。
+- ~~极速模式下照片是首选路径~~ ✅ 已实现（`ui-entry-photo.js`，拍完原位缩略图，点按重拍/删除）。
+- ~~「保存并继续」之后照片清空~~ ✅ 已实现。
+- **真机矩阵（Android Chrome / iOS Safari / 微信内置浏览器 / 单文件 html）仍是 3 格「未测」，不允许猜**，阶段 4 前需真机补测。
+- 压缩逻辑（长边 ≤1280px、JPEG 0.72→0.5）、`ImageStore` 内存实现、降级测试 ✅ 均按任务书第 3 节实现（6 处适度调整见 `docs/阶段3完成汇报.md` 第三节）。
+- **数据只增不改**：`schemaVersion` 已是 3，字段 `source`/`entryMode`/`imageIds` 已就位；图片存 IndexedDB（`qt-images`），**不放 localStorage**。✅
+- 新增文件每个 ≤400 行（本次最大 340）；阶段 2 的工具栏将来写在 `ui-toolbar.js`，`ui-entry.js` 保持 ≤500 行（当前 499）。
+- 界面文字 ≥14px、可点区域 ≥40px。✅（新增 CSS 已遵守）
 
 ## 五、环境坑（跨会话已踩过）
 

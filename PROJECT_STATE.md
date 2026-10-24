@@ -3,9 +3,24 @@
 > **参赛作品全名**：错题通——基于贝叶斯估计与遗忘曲线的薄弱点诊断与智能组卷系统
 >
 > **每个阶段开始前先读本文件，结束后更新它。** 这是跨会话的长期记忆，不依赖对话上下文。
-> 最后更新：2026-10-24（**第二份任务书「录题效率专项」阶段 1 完成**）
+> 最后更新：2026-10-24（**第二份任务书「录题效率专项」阶段 3（拍照存图）完成**）
 
 ---
+
+## 阶段 3（拍照存图）已完成
+
+| 交付 | 状态 | 验证 |
+|---|---|---|
+| js/image-pipeline.js（纯函数压缩：长边≤1280、JPEG 0.72→0.61→0.5） | ✅ | 15 项测试；浏览器实测 2000×1500→1280×960 |
+| js/image-store.js（ImageStore：内存实现 + IndexedDB `qt-images`，存 Blob） | ✅ | 16 项测试（含降级模拟 5 项）；实测 store=indexeddb |
+| js/image-view.js（全屏查看器双指缩放 / 缩略图注水 / objectURL 生命周期） | ✅ | 浏览器实测打开/关闭/注水 |
+| js/ui-entry-photo.js（拍照卡：原位缩略图、重拍/删除、保存并继续清空、降级提示） | ✅ | 14 项流程实测（375×667） |
+| 列表/组卷/打印页显示图片；空题干显示来源行 | ✅ | 实测第 6/7/10 项 |
+| 设置页占用统计 + 含图片备份（base64，>20MB 确认）+ 导入识别 + 清空连带 | ✅ | 实测第 11–13 项；4 项隐私测试 |
+| file:// 单文件冒烟（无头 Edge --headless=new + CDP） | ✅ | store=indexeddb｜blobOk=true｜dims=1280x960 |
+| 重新打包 + 外部引用 0 | ✅ | 单文件 1866 KB / zip 752 KB |
+
+**真机矩阵**：Android Chrome / iOS Safari / 微信内置浏览器 **未测**（如实标注，见 docs/阶段3完成汇报.md）。
 
 ## 阶段 1（录题效率专项）已完成
 
@@ -18,7 +33,7 @@
 | Unicode 兼容性实测脚本 tools/unicode-compat.js | ✅ | 72 无警告 + 3 有警告但渲染一致（∅√′） |
 | 重新打包 + 外部引用 0 | ✅ | 单文件 1816 KB / zip 733 KB |
 
-**测试总数：186 项全部通过**（stats 50 + storage 34 + export 29 + render 18 + mathtext 55）。
+**测试总数：222 项全部通过**（stats 50 + storage 34 + export 29 + render 18 + mathtext 55 + image 36）。
 
 ## 一、现在能做什么（已完成）
 
@@ -39,14 +54,14 @@
 | **单文件 html + 离线 zip** | ✅ | `file://` 下实测两个产物均可完整使用 |
 | 本地化 KaTeX（公式）+ ECharts（图表） | ✅ | 无 CDN 依赖，`file://` 直接打开可用 |
 
-**测试总数：114 项全部通过**（统计 45 + 存储/迁移 22 + 导出 29 + 渲染 18）。
+**测试总数：222 项全部通过**（stats 50 + storage 34 + export 29 + render 18 + mathtext 55 + image 36；「阶段 3」一节有明细）。
 
 ## 二、交付物（可直接发同学）
 
 ```
 03-错题通/dist/
-├── 错题通-单文件.html   1787 KB  ← 单个文件，双击/微信直接打开
-└── 错题通-离线版.zip     722 KB  ← 解压后打开 index.html（加载更快）
+├── 错题通-单文件.html   1866 KB  ← 单个文件，双击/微信直接打开（2026-10-24 实测）
+└── 错题通-离线版.zip     752 KB  ← 解压后打开 index.html（46 文件）
 ```
 
 重新生成：`cd 03-错题通 && node build/make-dist.js`
@@ -71,7 +86,7 @@
 ├── index.html              单页入口（经典脚本，不用 module）
 ├── css/app.css             全站样式 + @media print
 ├── build/make-dist.js      打包脚本（单文件 + zip，仅用 Node 内置模块）
-├── js/                     15 个模块
+├── js/                     19 个模块
 │   ├── util.js             工具 + QT 命名空间 + renderRichText（公式渲染）
 │   ├── config.js           FEEDBACK_URL 等可配置项
 │   ├── data.js             4 科知识点、5 种错因、v1 旧数据对照
@@ -79,16 +94,20 @@
 │   ├── sample-data.js      12 道示例题（带历史作答时间线）
 │   ├── stats.js            三个统计模型（纯函数）
 │   ├── export-usage.js     匿名数据导出（白名单，隐私边界）
+│   ├── image-pipeline.js   压缩纯函数 + 浏览器压缩（阶段 3）
+│   ├── image-store.js      ImageStore 内存/IndexedDB 实现 + 孤儿清理（阶段 3）
+│   ├── image-view.js       全屏查看器 + 缩略图注水 + objectURL 管理（阶段 3）
+│   ├── ui-entry-photo.js   录题页拍照卡（阶段 3）
 │   ├── ui-home.js          主页 / 今日复习 / 空库引导
-│   ├── ui-entry.js         录题 / 编辑
-│   ├── ui-list.js          错题本 + 筛选
+│   ├── ui-entry.js         录题 / 编辑（499 行，硬上限 500）
+│   ├── ui-list.js          错题本 + 筛选（含缩略图）
 │   ├── ui-diag.js          诊断 + ECharts（按需加载）
-│   ├── ui-quiz.js          组卷 setup/paper/result
-│   ├── ui-settings.js      备份 / 导出 / 示例 / 反馈
-│   ├── ui-print.js         打印页
-│   └── app.js              路由 + 标签栏 + 页面生命周期
+│   ├── ui-quiz.js          组卷 setup/paper/result（paper 含图片）
+│   ├── ui-settings.js      备份（含图片开关）/ 导出 / 示例 / 反馈
+│   ├── ui-print.js         打印页（含图片）
+│   └── app.js              路由 + 标签栏 + 页面生命周期 + 图片库初始化
 ├── lib/                    KaTeX + ECharts + 20 个 woff2 字体（1.6 MB）
-├── tests/                  4 个测试文件，114 项
+├── tests/                  6 个测试文件，222 项
 ├── dist/                   ★ 交付物（单文件 html + 离线 zip）
 └── docs/                   算法说明 / 系统设计 / 用户手册 / 测试报告 / 分发说明
 ```
@@ -158,10 +177,16 @@
 | 中文路径 + 单引号影响无头 Edge | `--print-to-pdf` 报告写成功但文件不存在 | 复制到纯 ASCII 路径再跑 |
 | 浏览器缓存 HTML | 改了 `index.html` 加脚本，页面仍加载旧的 | 用 `?v=N` 查询参数绕过 |
 | 单文件里 `</script>` 提前闭合 | 内联 JS 若有该字符串会截断 | 打包时转义为 `<\/script` |
+| **`openKeyCursor` 的 key 语义** | 在对象存储上开游标 key=主键，在索引上 key=索引键 | 阶段 3 `listQidPairs` 第一版 qid 全 undefined（孤儿清理会误删全部），必须走 `qid` 索引 |
+| **Windows 无头 Edge stdout 被丢弃** | `--dump-dom > 文件` 得到 0 字节（GUI 子系统） | 走 CDP：`--remote-debugging-port` + Node 内置 WebSocket 读 `Runtime.evaluate` |
+| **无头 Edge 旧模式丢 URL** | `--headless` 打开的是 Edge 同步欢迎页，不是命令行里的 file:// | 必须用 `--headless=new`（与 `--user-data-dir` 叠加使用） |
+| **git 身份未配置** | commit 报 `unable to auto-detect email` | 仓库 local 配置 `user.name=Reasonix / user.email=noreply@local`（与历史提交一致） |
 
-## 八、下一步（D7）
+## 八、下一步
 
-1. **拿真实反馈**：把 `dist/错题通-单文件.html` 发同学，一周后收反馈。
-2. **部署上线**（需用户给账号信息）：静态部署，根目录 `03-错题通/`；上线后 `curl` 实测 200。
-3. **填问卷链接**：`js/config.js` 的 `FEEDBACK_URL`，填完重新 `node build/make-dist.js`。
-4. **只修 bug**，不加功能。
+1. **阶段 4（埋点 + 基准脚本 + 文档 + 发布）**：按第二份任务书 4.1–4.4 执行；其中 4.3 组卷配额已在阶段 1 提前完成（`efa6520`）。
+2. **真机矩阵补测**：Android Chrome / iOS Safari / 微信内置浏览器三格「未测」，需要真机（清单见 `docs/阶段3完成汇报.md`）。
+3. **push 决策**：阶段 3 完成后本地 HEAD `8ba991a`，线上仍是阶段 1 版本；推不推等用户确认（代理用法：`HTTPS_PROXY=http://127.0.0.1:7890 git push` 单条命令内临时）。
+4. **拿真实反馈**：把 `dist/错题通-单文件.html` 发同学，一周后收反馈。
+5. **填问卷链接**：`js/config.js` 的 `FEEDBACK_URL`，填完重新 `node build/make-dist.js`。
+6. **D7 后只修 bug**，不加功能。
