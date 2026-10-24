@@ -11,8 +11,8 @@
 |---|---|
 | 仓库 | `github.com/yvdaoyin-ux/cuotitong`，OCR/C4 代码提交后紧跟收尾文档提交，0 未提交；tag `v1.2`（v1.3 待真机过审再打）；回滚点 `backup-20261024-before-phase3` |
 | 线上 | https://yvdaoyin-ux.github.io/cuotitong/ **v1.2，无 OCR**（密钥槽恒 null → 识别按钮隐藏；识别功能只在本地 `--ocr-key-file` 构建的单文件里） |
-| 测试 | **282 项全绿**（stats 50 / storage 34 / export 33 / render 18 / mathtext 55 / image 36 / symbols 31 / **ocr 25**） |
-| 阶段 | 第三份任务书 **A/B/C 全部完成**：OCR 验证当日 Go（印刷 5/5 可直接用、中位 982ms、额度达标），C4 已集成；手写组 4 张待用户测 |
+| 测试 | **306 项全绿**（stats 50 / storage 34 / export 34 / render 18 / mathtext 55 / image 36 / symbols 31 / ocr 25 / rotate 9 / ocr-unlock 14） |
+| 阶段 | 第四份任务书 **A/B/C 全部完成**（识别收口+埋点+口令解锁，`8eae829`）；待用户真机 + 密文包部署；判据 #4 额度口径待 Claude 裁定（真实通用包 199 万，最坏口径超线/实际口径安全，双口径已记录） |
 
 **参赛作品全名**：错题通——基于贝叶斯估计与遗忘曲线的薄弱点诊断与智能组卷系统
 
