@@ -164,8 +164,9 @@ group('B. 全角 / 中文 / 圆括号写法', () => {
  * ============================================================ */
 
 group('C. Unicode 符号（实测可直渲染，转换不应破坏）', () => {
-  // 2026-10-24 实测：KaTeX 0.16.9 能直接渲染 75/75 个常见 Unicode 符号。
-  // 因此 normalizeMath 不做 Unicode→\times 之类转换，这里验证「不破坏」。
+  // 2026-10-24 实测（strict 回调）：72 个符号无警告直接渲染；
+  // ∅、√、′ 三个有 unknownSymbol 警告但渲染视觉正确。
+  // 因此 normalizeMath 不做 Unicode→\times 之类转换（√ 除外，单独见下方），这里验证「不破坏」。
   test('×÷·−≤≥ 等符号保持原样（幂等，不破坏）', () => {
     const s = '$a×b÷c·d−e≤f≥g$';
     const r = M.normalizeMath(s);
@@ -184,6 +185,45 @@ group('C. Unicode 符号（实测可直渲染，转换不应破坏）', () => {
 
   test('ℝ ℂ ℕ ℤ ℚ 保持原样', () => {
     const s = '$x∈ℝ, z∈ℂ, n∈ℕ$';
+    assert.strictEqual(M.normalizeMath(s).text, s);
+  });
+});
+
+/* ============================================================
+ * C2. √ → \sqrt{} 机械转换（Claude 更正 b）
+ * ============================================================ */
+
+group('C2. √ 机械转换（不猜，只做明确规则）', () => {
+  test('√x → \\sqrt{x}', () => {
+    assert.strictEqual(M.normalizeMath('$√x$').text, String.raw`$\sqrt{x}$`);
+  });
+
+  test('√2 → \\sqrt{2}', () => {
+    assert.strictEqual(M.normalizeMath('$√2$').text, String.raw`$\sqrt{2}$`);
+  });
+
+  test('√{x+1} → \\sqrt{x+1}', () => {
+    assert.strictEqual(M.normalizeMath('$√{x+1}$').text, String.raw`$\sqrt{x+1}$`);
+  });
+
+  test('√(x+1) → \\sqrt{x+1}（圆括号改花括号）', () => {
+    assert.strictEqual(M.normalizeMath('$√(x+1)$').text, String.raw`$\sqrt{x+1}$`);
+  });
+
+  test('√x² → \\sqrt{x}²（只包根号内，上标在外）', () => {
+    assert.strictEqual(M.normalizeMath('$√x^2$').text, String.raw`$\sqrt{x}^2$`);
+  });
+
+  test('√ 在末尾不动（没有紧跟内容，不猜）', () => {
+    assert.strictEqual(M.normalizeMath('$x√$').text, '$x√$');
+  });
+
+  test('√ 后是空格不动（不猜）', () => {
+    assert.strictEqual(M.normalizeMath('$√ α$').text, '$√ α$');
+  });
+
+  test('已是 \\sqrt 的不动（幂等）', () => {
+    const s = String.raw`$\sqrt{x}$`;
     assert.strictEqual(M.normalizeMath(s).text, s);
   });
 });

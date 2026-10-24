@@ -122,8 +122,31 @@
   }
 
   /**
+   * `√` → `\sqrt{...}` 的机械转换（Claude 更正 b，2026-10-24 实测确认）。
+   *
+   * 背景：KaTeX 对 Unicode `√` 会报 unknownSymbol 警告，且渲染出来只是
+   * 「根号符号 + 紧跟内容」，**没有根号横线**，与真正的 `\sqrt` 语义不符。
+   *
+   * 规则（只做机械转换，不猜）：
+   *   - `√{…}` → `\sqrt{…}`（取花括号内内容）
+   *   - `√(…)` → `\sqrt{…}`（圆括号改成花括号）
+   *   - `√x`（单个字母/数字）→ `\sqrt{x}`
+   *   - 其它情况（如 `√` 后面是命令、空格、或已经是 \sqrt）不动
+   */
+  function convertSqrt(s) {
+    // 已经是 \sqrt 的不动
+    return s.replace(/√(\{[^{}]+\}|\([^)]+\)|[0-9a-zA-Z])/g, function (m, arg) {
+      if (arg.charAt(0) === '{') return '\\sqrt' + arg;
+      if (arg.charAt(0) === '(') return '\\sqrt{' + arg.slice(1, -1) + '}';
+      return '\\sqrt{' + arg + '}';
+    });
+  }
+
+  /**
    * 把公式内的连续汉字/中文标点包成 \text{...}。
-   * 中文标点（。；：、！？）也包进去 —— 它们不是数学符号，直接放会渲染成乱码。
+   * 中文标点（。；：、！？）也包进去 —— KaTeX 在公式模式遇到中文会触发
+   * unicodeTextInMathMode 警告，并按文本字体渲染，间距和斜体与数学字体不一致，
+   * 所以必须用 \text{} 明确包起来。
    * 逗号、括号、等号已在前面转成半角，保持数学语义，不包。
    * 已在 \text{...} 内的跳过（按花括号深度判断）。
    */
@@ -204,6 +227,7 @@
       var body = p.value;
       body = fullwidthAsciiToHalf(body);   // 全角 ASCII → 半角（含全角标点）
       body = normalizeSpaces(body);        // U+3000 → 普通空格
+      body = convertSqrt(body);            // √ → \sqrt{}（机械规则，不猜）
       body = wrapCjk(body);                // 连续中文 → \text{}
       return p.type === 'inline' ? '$' + body + '$' : '$$' + body + '$$';
     }).join('');
@@ -317,6 +341,7 @@
     renderRich: renderRich,
     // 供测试与调试
     fullwidthAsciiToHalf: fullwidthAsciiToHalf,
-    wrapCjk: wrapCjk
+    wrapCjk: wrapCjk,
+    convertSqrt: convertSqrt
   };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

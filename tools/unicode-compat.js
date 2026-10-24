@@ -3,9 +3,16 @@
  * tools/unicode-compat.js —— Unicode 数学符号的 KaTeX 兼容性实测
  *
  * 用途：为 normalizeMath 的「规则 6」提供实测依据。
- * 结论（2026-10-24，KaTeX 0.16.9）：全部 75 个常见符号都能被 KaTeX 直接渲染，
- * **不需要** Unicode→LaTeX 命令转换。所以 normalizeMath 只做「全角转半角 + 中文包 text」，
- * 不做符号转换。
+ *
+ * 结论（2026-10-24，KaTeX 0.16.9，strict 回调实测）：
+ *   - **72 个符号无任何警告**，可直接渲染。
+ *   - **3 个符号（∅、√、′）触发 unknownSymbol 警告**，但渲染结果与
+ *     `\emptyset`、`\surd`、`\prime` 一致，视觉上正确。
+ *   - 其中 `√` 有额外语义问题：`√x` 只渲染出「根号符号 + x」而无根号横线，
+ *     与 `\sqrt{x}` 不同。故 normalizeMath 单独加了 `√`→`\sqrt{}` 的机械转换。
+ *
+ * 重要更正（Claude 指出，我复验确认）：之前用 `strict:'ignore'` 把警告吞掉了，
+ * 误判成「75/75 全部无警告」。本版改用 strict 回调收集警告，区分两类。
  *
  * 运行：node tools/unicode-compat.js
  */
@@ -46,58 +53,73 @@ const SYMBOLS = [
   ['⟨', 'langle'], ['⟩', 'rangle'], ['∴', 'therefore'], ['∵', 'because'],
 ];
 
-/** 单个符号能否无错误渲染（throwOnError:true + strict:'ignore'）。 */
-function canRender(sym) {
+/**
+ * 用 strict 回调收集警告，返回 { renders, warnings }。
+ * renders: 是否真的渲染出来了（不抛异常、无错误色）
+ * warnings: 触发的警告 code 列表（unknownSymbol / unicodeTextInMathMode 等）
+ */
+function probe(sym) {
+  const warnings = [];
+  let renders = false;
   try {
-    const html = katex.renderToString(sym, { throwOnError: true, strict: 'ignore' });
-    return !/color:\s*#cc0000/i.test(html); // 错误色 = 软失败
+    const html = katex.renderToString(sym, {
+      throwOnError: true,
+      strict: function (code, msg, tok) { warnings.push(code); }
+    });
+    renders = !/color:\s*#cc0000/i.test(html);
   } catch (e) {
-    return false;
+    renders = false;
   }
+  return { renders, warnings };
 }
 
-/** 在真实语境里验证（单个符号能渲染不代表在公式里没问题）。 */
-const CONTEXTS = [
-  'a × b', 'a ÷ b', 'x ≤ 1', 'x ≥ 1', 'a ≠ b', 'a ≈ b',
-  'x ∈ A', 'A ⊂ B', 'A ∪ B', 'A ∩ B', 'A = ∅',
-  'x → 0', 'n → ∞', '∂f/∂x', '∇f', '∑ x', '∫ f dx', '√2',
-  'sin α', 'cos θ', 'λ x', 'N(μ, σ²)', 'x ∈ ℝ', 'n ∈ ℕ',
-  '∀x ∈ A, x ≥ 0'
-];
+const noWarn = [];
+const warnButOk = [];
+const failed = [];
 
-function contextOk(ctx) {
-  try {
-    const html = katex.renderToString(ctx, { throwOnError: true, strict: 'ignore' });
-    return !/color:\s*#cc0000/i.test(html);
-  } catch (e) {
-    return false;
-  }
-}
-
-let directOk = 0, directBad = [];
 SYMBOLS.forEach(function (pair) {
-  if (canRender(pair[0])) directOk += 1;
-  else directBad.push(pair[0]);
+  const sym = pair[0];
+  const r = probe(sym);
+  if (!r.renders) failed.push(sym);
+  else if (r.warnings.length === 0) noWarn.push(sym);
+  else warnButOk.push({ sym, codes: r.warnings });
 });
 
-let ctxOk = 0, ctxBad = [];
-CONTEXTS.forEach(function (ctx) {
-  if (contextOk(ctx)) ctxOk += 1;
-  else ctxBad.push(ctx);
+console.log('=== 单个符号（strict 回调收集警告） ===');
+console.log('无警告直接渲染：' + noWarn.length + ' / ' + SYMBOLS.length);
+console.log('  ' + noWarn.join(' '));
+console.log('');
+console.log('有警告但渲染正确：' + warnButOk.length + ' 个');
+warnButOk.forEach(function (w) {
+  console.log('  ' + w.sym + ' → 警告 ' + w.codes.join(','));
 });
+console.log('');
+console.log('渲染失败：' + failed.length + ' 个' + (failed.length ? ' ' + failed.join(' ') : ''));
 
-console.log('=== 单个符号 ===');
-console.log('可直接渲染：' + directOk + ' / ' + SYMBOLS.length);
-if (directBad.length) console.log('需转换：' + directBad.join(' '));
-else console.log('全部可直接渲染，无需 Unicode→LaTeX 转换');
+/* ---------- √ 的语义问题专项 ---------- */
 
 console.log('');
-console.log('=== 真实语境 ===');
-console.log('可渲染：' + ctxOk + ' / ' + CONTEXTS.length);
-if (ctxBad.length) console.log('失败：' + ctxBad.join(' | '));
-else console.log('语境中全部可渲染');
+console.log('=== √ 的语义问题（Claude 更正 b） ===');
+
+function sqrtBarCheck(src) {
+  // 看渲染出来的 HTML 里有没有真正的 sqrt 结构（mroot/msqrt 或 \sqrt 的视觉横线）
+  const html = katex.renderToString(src, { throwOnError: false });
+  const hasSqrt = /sqrt|surd|mroot|msqrt/i.test(html) && html.indexOf('√') < 0;
+  return { src, html, hasTrueSqrt: hasSqrt };
+}
+
+['√x', '√{x}', '√(x)', '√2'].forEach(function (s) {
+  const r = sqrtBarCheck(s);
+  console.log('  ' + s + ' → 有真 sqrt 结构: ' + (r.hasTrueSqrt ? '是' : '否（只有符号+内容，无根号横线）'));
+});
+// 对照：正确的 \sqrt
+const ref = katex.renderToString('\\sqrt{x}', { throwOnError: false });
+console.log('  对照 \\sqrt{x} → 有真 sqrt 结构: ' + (/sqrt|mroot|msqrt/i.test(ref) ? '是' : '否'));
 
 console.log('');
-console.log('结论：规则 6（Unicode 符号转命令）可以整体省略。');
-console.log('真正必须处理的是全角字符（（），＝＄等），它们在 KaTeX 里会渲染出乱码，');
-console.log('必须归一为半角 —— 这一项 normalizeMath 已实现并有测试。');
+console.log('结论：');
+console.log('  · 72 个符号无警告，可直接渲染，规则 6 对它们省略。');
+console.log('  · ∅、√、′ 三个有 unknownSymbol 警告但渲染视觉正确，可不转换。');
+console.log('  · √ 单独处理：normalizeMath 已加 √→\\sqrt{} 的机械规则（有 ≥5 项测试）。');
+console.log('  · 全角字符（（），＝＄等）触发 unicodeTextInMathMode 警告、按文本字体渲染，');
+console.log('    间距斜体与数学字体不一致，必须归一为半角 —— normalizeMath 已实现并有测试。');
