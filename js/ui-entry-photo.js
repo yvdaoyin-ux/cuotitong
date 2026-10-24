@@ -42,6 +42,7 @@
         '<div class="photo-actions" id="photo-actions">' +
           '<button type="button" class="btn" id="btn-cam" disabled>📷 拍照</button>' +
           '<button type="button" class="btn" id="btn-album" disabled>🖼️ 相册</button>' +
+          '<button type="button" class="btn" id="btn-ocr" hidden>🔍 识别文字</button>' +
           '<input type="file" id="file-cam" accept="image/*" capture="environment" hidden>' +
           '<input type="file" id="file-album" accept="image/*" multiple hidden>' +
         '</div>' +
@@ -244,6 +245,20 @@
     stripEl = null;
   }
 
+  /**
+   * OCR（C4）用：取最近一张可识别照片的 Blob——先新拍池（还没入库），
+   * 再已入库的旧图（编辑态）。一张都没有 / 库不可用 → resolve(null)。
+   * @returns {Promise<Blob|null>}
+   */
+  function getBlobForOcr() {
+    if (pending.length) return Promise.resolve(pending[pending.length - 1].blob);
+    var ids = (draft && draft.imageIds) || [];
+    if (!ids.length || !store) return Promise.resolve(null);
+    return store.get(ids[ids.length - 1]).then(function (rec) {
+      return (rec && rec.blob) ? rec.blob : null;
+    }).catch(function () { return null; });
+  }
+
   /* ---------------- 错误 / 提示 ---------------- */
 
   function showErr(msg) {
@@ -286,6 +301,9 @@
       addFiles(fileAlbum.files);
       fileAlbum.value = '';
     });
+
+    // OCR（C4）：按钮默认 hidden，由 ui-ocr 视密钥有无决定是否露出；无此模块则一直隐藏
+    if (QT.uiOcr) QT.uiOcr.bind(el);
 
     // 缩略图点击：新图可重拍/删除；旧图可删除（都用带操作按钮的全屏查看器）
     stripEl.addEventListener('click', function (ev) {
@@ -335,6 +353,7 @@
     saveFor: saveFor,
     reset: reset,
     dispose: dispose,
+    getBlobForOcr: getBlobForOcr,
     MAX_PER_MISTAKE: pipeline ? pipeline.MAX_PER_MISTAKE : 3
   };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

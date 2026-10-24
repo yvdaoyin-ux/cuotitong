@@ -80,7 +80,7 @@ function inlineKatexCss(css) {
   return { css: out, fontsInlined: used.length };
 }
 
-function buildSingleFile() {
+function buildSingleFile(ocrKey) {
   console.log('\n[1/2] 生成单文件 html …');
 
   let html = read('index.html');
@@ -137,6 +137,20 @@ function buildSingleFile() {
     '</div></noscript>'
   );
 
+  // ⑥ OCR 密钥注入（仅本地构建传 --ocr-key-file 时；dist/ 在 .gitignore，密钥不进 git）
+  let ocrInjected = false;
+  if (ocrKey) {
+    const before = html;
+    html = html.replace('window.QT_OCR_KEY = null', 'window.QT_OCR_KEY = ' + JSON.stringify(ocrKey));
+    if (html === before) {
+      throw new Error('没找到 OCR 密钥注入槽（window.QT_OCR_KEY = null），index.html 可能被改动');
+    }
+    ocrInjected = true;
+    console.log('  ✓ OCR 密钥已注入（只存在于本地产物，不进 git）');
+  } else {
+    console.log('  · 未注入 OCR 密钥（没传 --ocr-key-file），识别按钮将自动隐藏');
+  }
+
   const outPath = path.join(DIST, '错题通-单文件.html');
   fs.writeFileSync(outPath, html, 'utf8');
 
@@ -154,7 +168,23 @@ function buildSingleFile() {
   }
   console.log('  ✓ 无外部引用残留');
 
-  return { path: outPath, bytes };
+  return { path: outPath, bytes, ocrInjected };
+}
+
+/**
+ * 解析 --ocr-key-file <路径>：从文件读 OCR 密钥（首尾空白去掉）。
+ * 不传参数 → 返回 null（识别按钮在产物里自动隐藏）。
+ * 密钥文件本身不放进仓库，用完即弃。
+ */
+function readOcrKeyFromArgv() {
+  const i = process.argv.indexOf('--ocr-key-file');
+  if (i < 0) return null;
+  const f = process.argv[i + 1];
+  if (!f || !f.trim()) throw new Error('--ocr-key-file 需要跟一个密钥文件路径');
+  const key = fs.readFileSync(path.resolve(f), 'utf8').trim();
+  if (!key) throw new Error('OCR 密钥文件是空的：' + f);
+  if (key.length < 16) throw new Error('OCR 密钥长度可疑（<16 字符）——确认贴的是完整 API Key');
+  return key;
 }
 
 /* ============================================================
@@ -340,9 +370,12 @@ function buildZip() {
 
 function main() {
   ensureDir(DIST);
-  const single = buildSingleFile();
+  const single = buildSingleFile(readOcrKeyFromArgv());
   const zip = buildZip();
 
+  if (single.ocrInjected) {
+    console.log('\n注意：只有单文件版含 OCR 密钥；离线 zip 版用的是原始 index.html，识别按钮自动隐藏。');
+  }
   console.log('\n' + '='.repeat(52));
   console.log('产物：');
   console.log('  dist/' + path.basename(single.path) + '  ' + fmtKB(single.bytes));
