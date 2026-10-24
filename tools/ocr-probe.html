@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OCR 探针（仅本地使用，不进发布产物）</title>
+<link rel="stylesheet" href="../lib/katex.min.css">
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 860px; margin: 0 auto; padding: 16px; line-height: 1.6; color: #222; }
+  h1 { font-size: 20px; } h2 { font-size: 16px; margin-top: 24px; }
+  .card { border: 1px solid #ddd; border-radius: 10px; padding: 12px; margin: 10px 0; }
+  input[type=password], input[type=text] { width: 100%; box-sizing: border-box; padding: 8px; }
+  button { padding: 8px 16px; margin: 4px 4px 4px 0; cursor: pointer; }
+  #log { background: #111; color: #9f9; font-family: monospace; font-size: 12px; padding: 10px; white-space: pre-wrap; max-height: 200px; overflow: auto; }
+  .side { display: flex; gap: 12px; flex-wrap: wrap; }
+  .side > div { flex: 1; min-width: 260px; border: 1px solid #eee; border-radius: 8px; padding: 8px; }
+  img { max-width: 100%; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  td, th { border: 1px solid #ddd; padding: 4px 6px; text-align: left; }
+  .warn { color: #b00; }
+  .ok { color: #070; }
+</style>
+</head>
+<body>
+<h1>OCR 探针 · glm-ocr（layout_parsing）</h1>
+<p class="warn">本页面仅用于本地可行性验证：<b>不进主应用、不进 dist、不被主应用引用</b>。
+密钥只存在本页内存里（刷新即没），不写 localStorage / URL / 控制台 / 任何文件。</p>
+
+<div class="card">
+  <h2>1. 密钥（只放内存）</h2>
+  <input type="password" id="key" placeholder="粘贴智谱 API Key（Authorization 用）" autocomplete="off">
+</div>
+
+<div class="card">
+  <h2>2. 选一张错题照片（会先过现有压缩管线，与将来集成条件一致）</h2>
+  <input type="file" id="file" accept="image/*">
+  <div id="imginfo"></div>
+</div>
+
+<div class="card">
+  <h2>3. 发送（同一张图依次试 base64 的两种写法）</h2>
+  <button id="go">发送识别</button>
+  <span id="status"></span>
+</div>
+
+<div class="card">
+  <h2>过程日志</h2>
+  <div id="log"></div>
+</div>
+
+<div class="card" id="result" hidden>
+  <h2>4. 结果</h2>
+  <div id="summary"></div>
+  <h2>md_results（原文）</h2>
+  <pre id="mdraw"></pre>
+  <h2>md_results（经主应用的 mathtext.renderRich 渲染）</h2>
+  <div id="mdrendered"></div>
+  <h2>layout_details 逐块</h2>
+  <table id="blocks"><thead><tr><th>#</th><th>label</th><th>content（前 200 字）</th></tr></thead><tbody></tbody></table>
+  <h2>与原图并排</h2>
+  <div class="side">
+    <div><b>原图（压缩后）</b><div id="origimg"></div></div>
+    <div><b>识别结果（渲染）</b><div id="rendered2"></div></div>
+  </div>
+</div>
+
+<!-- 复用主应用的压缩管线与公式渲染；经典脚本 + file:// 可直接打开 -->
+<script src="../lib/katex.min.js"></script>
+<script src="../js/util.js"></script>
+<script src="../js/mathtext.js"></script>
+<script src="../js/image-pipeline.js"></script>
+<script>
+(function () {
+  'use strict';
+  var QT = window.QT;
+  var state = { compressed: null, dataUrl: '' };
+
+  function log(msg, kind) {
+    var el = document.getElementById('log');
+    el.textContent += (kind === 'err' ? '[ERR] ' : kind === 'ok' ? '[OK] ' : '') + msg + '\n';
+    el.scrollTop = el.scrollHeight;
+  }
+
+  document.getElementById('file').addEventListener('change', function () {
+    var f = this.files && this.files[0];
+    if (!f) return;
+    QT.imagePipeline.compressFile(f).then(function (r) {
+      state.compressed = r.blob;
+      var fr = new FileReader();
+      fr.onload = function () { state.dataUrl = String(fr.result); };
+      fr.readAsDataURL(r.blob);
+      var url = URL.createObjectURL(r.blob);
+      document.getElementById('imginfo').innerHTML =
+        '压缩后：' + r.w + '×' + r.h + '，' + (r.blob.size / 1024).toFixed(0) + ' KB，质量 ' + r.quality +
+        '<br><img id="prev" src="' + url + '" style="max-height:220px">';
+      log('压缩完成 ' + r.w + '×' + r.h + ' ' + (r.blob.size / 1024).toFixed(0) + 'KB q=' + r.quality, 'ok');
+    }).catch(function (e) {
+      log('压缩失败：' + (e.message || e), 'err');
+    });
+  });
+
+  /** 单次请求。mode: 'raw' = 纯 base64；'dataurl' = 带 data: 前缀。 */
+  function attempt(mode) {
+    var key = document.getElementById('key').value.trim();
+    if (!key) return Promise.reject(new Error('先填密钥'));
+    // 纯 base64：去掉 dataURL 头；data URL：整个带前缀
+    var file = mode === 'raw' ? state.dataUrl.replace(/^data:[^,]+,/, '') : state.dataUrl;
+    var body = JSON.stringify({ model: 'glm-ocr', file: file });
+    var t0 = Date.now();
+    log('尝试 file=' + mode + '，请求体 ' + (body.length / 1024).toFixed(0) + 'KB …');
+    return fetch('https://open.bigmodel.cn/api/paas/v4/layout_parsing', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': key },
+      body: body
+    }).then(function (res) {
+      var ms = Date.now() - t0;
+      log('HTTP ' + res.status + '，耗时 ' + ms + 'ms，mode=' + mode);
+      return res.text().then(function (text) {
+        return { status: res.status, ms: ms, mode: mode, text: text };
+      });
+    });
+  }
+
+  function renderResult(r) {
+    document.getElementById('result').hidden = false;
+    var crossOriginHint = r.status === 0 ? '（fetch 抛异常且无状态码——大概率是 CORS 跨域被拒，纯前端方案直接 No-Go）' : '';
+    document.getElementById('summary').innerHTML =
+      'HTTP 状态：<b>' + r.status + '</b> ' + crossOriginHint +
+      '｜成功的写法：<b>' + (r.mode === 'raw' ? '纯 base64' : 'data URL') + '</b>' +
+      '｜耗时：<b>' + r.ms + 'ms</b>';
+    var json = null;
+    try { json = JSON.parse(r.text); } catch (e) {
+      document.getElementById('mdraw').textContent = '响应不是 JSON：\n' + r.text.slice(0, 2000);
+      return;
+    }
+    var usage = json.usage || (json.data && json.data.usage);
+    document.getElementById('summary').innerHTML += '｜usage：<b>' + JSON.stringify(usage || '(无)') + '</b>';
+    var md = json.md_results || (json.data && json.data.md_results) || '(响应里没有 md_results 字段)';
+    document.getElementById('mdraw').textContent = md;
+    try {
+      document.getElementById('mdrendered').innerHTML = QT.mathtext.renderRich(md).html;
+      document.getElementById('rendered2').innerHTML = QT.mathtext.renderRich(md).html;
+    } catch (e) {
+      document.getElementById('mdrendered').textContent = '渲染失败：' + e.message;
+    }
+    var details = json.layout_details || (json.data && json.data.layout_details) || [];
+    var tb = document.querySelector('#blocks tbody');
+    tb.innerHTML = '';
+    details.forEach(function (b, i) {
+      var tr = document.createElement('tr');
+      tr.innerHTML = '<td>' + i + '</td><td>' + (b.label || '?') + '</td><td></td>';
+      tr.lastChild.textContent = String(b.content || '').slice(0, 200);
+      tb.appendChild(tr);
+    });
+    if (!details.length) tb.innerHTML = '<tr><td colspan="3">（无 layout_details）</td></tr>';
+  }
+
+  document.getElementById('go').addEventListener('click', function () {
+    if (!state.compressed) { alert('先选图片'); return; }
+    var out = document.getElementById('status');
+    out.textContent = '发送中…';
+    document.getElementById('log').textContent = '';
+    // 先试纯 base64，4xx/5xx 或异常再试 data URL
+    attempt('raw')
+      .then(function (r) {
+        if (r.status >= 200 && r.status < 300) return r;
+        log('纯 base64 失败（HTTP ' + r.status + '），改试 data URL', 'err');
+        return attempt('dataurl');
+      })
+      .catch(function (e) {
+        log('纯 base64 fetch 异常：' + (e.message || e) + '，改试 data URL', 'err');
+        return attempt('dataurl');
+      })
+      .then(function (r) {
+        // fetch 层异常（CORS）时 r 可能带 status:0
+        if (r && r.status >= 200 && r.status < 300) {
+          out.textContent = '成功（' + r.mode + '，' + r.ms + 'ms）';
+          renderResult(r);
+        } else {
+          out.textContent = '两种写法都失败' + (r && r.status === 0 ? '（疑似 CORS）' : '（HTTP ' + (r ? r.status : '?') + '）');
+          if (r) renderResult(r);
+        }
+      })
+      .catch(function (e) {
+        out.textContent = '失败：' + (e.message || e);
+        log('最终失败：' + (e.message || e), 'err');
+      });
+  });
+
+  log('探针就绪。接口：POST /api/paas/v4/layout_parsing，model=glm-ocr。先填密钥，再选图，再点发送。');
+})();
+</script>
+</body>
+</html>
