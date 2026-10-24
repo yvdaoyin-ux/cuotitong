@@ -9,14 +9,14 @@
 
 | 项 | 值 |
 |---|---|
-| 仓库 | `github.com/yvdaoyin-ux/cuotitong`，HEAD `9036b8c`（v1.1），0 未提交；回滚点 tag `backup-20261024-before-phase3` |
-| 线上 | https://yvdaoyin-ux.github.io/cuotitong/ **已同步 v1.1**（curl 200 + 线上可拉到 symbols.js 实测） |
-| 测试 | **252 项全绿**（`node --test tests/*.test.js`：stats 50 / storage 34 / export 33 / render 18 / mathtext 55 / image 36 / symbols 26） |
-| 阶段 | 第二份任务书**全部四阶段完成**（1 输入基础设施 / 2 公式工具栏 / 3 拍照存图 / 4 埋点·基准·文档·发布），tag `v1.1` |
+| 仓库 | `github.com/yvdaoyin-ux/cuotitong`，HEAD `2b871c8`，0 未提交；tag `v1.2`；回滚点 `backup-20261024-before-phase3` |
+| 线上 | https://yvdaoyin-ux.github.io/cuotitong/ **已同步 v1.2**（curl 实测 css 含 imgthumb--wide） |
+| 测试 | **257 项全绿**（`node --test tests/*.test.js`：stats 50 / storage 34 / export 33 / render 18 / mathtext 55 / image 36 / symbols 31） |
+| 阶段 | 第二份任务书四阶段 ✅；**第三份任务书（收尾修复+试用准备+OCR 验证）A/B/C1 完成**，C2/C3 等用户实测 |
 
 **参赛作品全名**：错题通——基于贝叶斯估计与遗忘曲线的薄弱点诊断与智能组卷系统
 
-**下一件事**：①真机补测三格「未测」（Android/iOS/微信）②发单文件收真实反馈（埋点已就位）③等用户给问卷链接。**D7 后只修 bug 不加功能**；选做 G/H/I 需用户确认。
+**下一件事**：①用户发 v1.2 给同学试用（附真机自测清单）②用户提供 OCR 密钥 + 10 张照片跑探针 → Go/No-Go（判据已写死）③10-29 起功能冻结只修 bug。桌面 `错题通.html` 已是 v1.2（旧版在 `错题通-v1.1-备份.html`）。
 
 ## 二、开工前必读（按顺序）
 
