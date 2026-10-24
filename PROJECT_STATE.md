@@ -112,7 +112,7 @@
 node build/make-dist.js --ocr-key-file <key文件路径>
 ```
 
-桌面副本：`Desktop/错题通.html` 已是 v1.2；旧版留作 `Desktop/错题通-v1.1-备份.html`。
+桌面副本：`Desktop/错题通.html` = 最新构建（2026-10-24 213ff68 重打包，无密钥 → 识别按钮隐藏，功能与 v1.2 相同）；更早的 v1.2 桌面副本已被用户移走/删除（桌面现仅存 `错题通-v1.1-备份.html`）。
 
 重新生成：`cd 03-错题通 && node build/make-dist.js`
 

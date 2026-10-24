@@ -67,6 +67,59 @@
     return Number(bytes) > (limit || SIZE_LIMIT);
   }
 
+  /* ---------------- A3 旋转（第四份任务书） ---------------- */
+
+  /**
+   * 旋转后的新宽高（纯函数，Node 可测）。
+   * 90°/270° 宽高互换，180° 不变；角度只认 90/180/270，其余返回 null。
+   */
+  function computeRotatedSize(w, h, angle) {
+    w = Number(w); h = Number(h);
+    if (!isFinite(w) || !isFinite(h) || w <= 0 || h <= 0) return null;
+    var a = Number(angle);
+    if (a !== 90 && a !== 180 && a !== 270) return null;
+    if (a === 180) return { w: Math.round(w), h: Math.round(h) };
+    return { w: Math.round(h), h: Math.round(w) };
+  }
+
+  /**
+   * 把一张图顺时针旋转 angle 度并重新走压缩阶梯（≤200KB）。
+   * 浏览器专用（canvas）；返回 { blob, w, h, quality }，与 compressFile 同形。
+   */
+  function rotateBlob(blob, angle) {
+    if (typeof document === 'undefined') {
+      return Promise.reject(new Error('rotateBlob 仅浏览器可用'));
+    }
+    return decodeFile(blob).then(function (dec) {
+      try {
+        var t = computeRotatedSize(dec.width, dec.height, angle);
+        if (!t) throw new Error('不支持的旋转角度（只支持 90/180/270）');
+        var canvas = document.createElement('canvas');
+        canvas.width = t.w;
+        canvas.height = t.h;
+        var ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, t.w, t.h);
+        ctx.translate(t.w / 2, t.h / 2);
+        ctx.rotate(angle * Math.PI / 180); // canvas y 轴向下，正角 = 顺时针
+        ctx.drawImage(dec.source, -dec.width / 2, -dec.height / 2);
+        var ladder = qualitySequence();
+        var attempt = function (i) {
+          var q = ladder[Math.min(i, ladder.length - 1)];
+          return canvasToBlob(canvas, q).then(function (out) {
+            if (!overSize(out.size) || i >= ladder.length - 1) {
+              return { blob: out, w: t.w, h: t.h, quality: q };
+            }
+            return attempt(i + 1);
+          });
+        };
+        return attempt(0);
+      } finally {
+        dec.close();
+      }
+    });
+  }
+
   /**
    * base64 后的体积估算（不含 dataURL 头部）。
    * 用途：含图片备份在真正生成前先预估，超 20MB 提前警告，避免卡死浏览器。
@@ -187,6 +240,8 @@
     qualitySequence: qualitySequence,
     overSize: overSize,
     base64SizeOf: base64SizeOf,
-    compressFile: compressFile
+    compressFile: compressFile,
+    computeRotatedSize: computeRotatedSize,
+    rotateBlob: rotateBlob
   };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

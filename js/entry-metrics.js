@@ -82,6 +82,7 @@
     document.addEventListener('visibilitychange', onVisibility);
 
     if (QT.toolbar) QT.toolbar.resetTaps();
+    if (QT.uiOcr && QT.uiOcr.resetMetrics) QT.uiOcr.resetMetrics(); // B3：识别计数按本次录题会话归零
     QT.storage.logEvent('entry_open');
   }
 
@@ -104,6 +105,8 @@
     }
 
     var photoCount = Array.isArray(payload.imageIds) ? payload.imageIds.length : 0;
+    // B3（第四份任务书）：识别埋点——只有计数与耗时，绝无识别文字
+    var om = (QT.uiOcr && QT.uiOcr.metrics) ? QT.uiOcr.metrics() : null;
     QT.storage.logEvent('entry_save', {
       ms: ms,
       mode: mode === 'continue' ? 'continue' : (mode === 'quick' ? 'quick' : 'full'),
@@ -112,7 +115,12 @@
       photoCount: photoCount,
       pasted: state.pasted,
       stemLen: String(payload.stem == null ? '' : payload.stem).trim().length,
-      hasSource: !!String(payload.source == null ? '' : payload.source).trim()
+      hasSource: !!String(payload.source == null ? '' : payload.source).trim(),
+      ocrUsed: !!(om && om.used),
+      ocrClicks: om ? om.clicks : 0,
+      ocrOkCount: om ? om.okCount : 0,
+      ocrMsTotal: om ? om.msTotal : 0,
+      ocrChars: om ? om.chars : 0
     });
     state.armed = false;
   }

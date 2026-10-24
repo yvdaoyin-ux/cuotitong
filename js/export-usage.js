@@ -50,7 +50,13 @@
     photoCount: 'number',  // 照片张数
     pasted: 'boolean',     // 是否有粘贴动作
     stemLen: 'number',     // 题干字数（非内容本身）
-    hasSource: 'boolean'   // 是否填了来源
+    hasSource: 'boolean',  // 是否填了来源
+    // —— 第四份任务书 B3：识别埋点（只有计数与耗时，绝无识别文字）——
+    ocrUsed: 'boolean',    // 本次录题是否用过识别
+    ocrClicks: 'number',   // 识别按钮点击次数（含被额度拦下的）
+    ocrOkCount: 'number',  // 识别成功次数
+    ocrMsTotal: 'number',  // 识别耗时合计毫秒
+    ocrChars: 'number'     // 识别结果字数（非内容本身）
   };
 
   /** 事件类型白名单。未知类型直接丢弃，避免未来误加的高危埋点被带出去。 */
@@ -242,7 +248,7 @@
    */
   function buildEventsCsv(db) {
     var events = (db && Array.isArray(db.events)) ? db.events : [];
-    var lines = ['时间,事件类型,科目,题数,答对,答错,耗时ms,模式,工具栏点击,拍照,粘贴,题干字数,有来源'];
+    var lines = ['时间,事件类型,科目,题数,答对,答错,耗时ms,模式,工具栏点击,拍照,粘贴,题干字数,有来源,识别用过,识别点击,识别成功,识别耗时ms,识别字数'];
     events.forEach(function (e) {
       if (!e || !EVENT_ALLOW[e.type]) return;
       var p = cleanPayload(e.payload);
@@ -266,7 +272,12 @@
         csvCell(bool(p.usedPhoto)),
         csvCell(bool(p.pasted)),
         csvCell(p.stemLen != null ? p.stemLen : ''),
-        csvCell(bool(p.hasSource))
+        csvCell(bool(p.hasSource)),
+        csvCell(bool(p.ocrUsed)),
+        csvCell(p.ocrClicks != null ? p.ocrClicks : ''),
+        csvCell(p.ocrOkCount != null ? p.ocrOkCount : ''),
+        csvCell(p.ocrMsTotal != null ? p.ocrMsTotal : ''),
+        csvCell(p.ocrChars != null ? p.ocrChars : '')
       ].join(','));
     });
     return lines.join('\r\n');

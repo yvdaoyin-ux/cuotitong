@@ -32,8 +32,18 @@
 </div>
 
 <div class="card">
-  <h2>2. 选一张错题照片（会先过现有压缩管线，与将来集成条件一致）</h2>
+  <h2>2. 选一张错题照片（先过压缩管线；B1：可切换长边对比识别质量）</h2>
   <input type="file" id="file" accept="image/*">
+  <div>
+    压缩长边：
+    <select id="edge">
+      <option value="1280" selected>1280（主应用现行）</option>
+      <option value="1600">1600</option>
+      <option value="1920">1920</option>
+    </select>
+    <span class="warn">B1 实验：同一批 3 张公式密集照片，三档各识别一次并记录耗时/tokens/错误处数。
+    只有「错误处数明显减少（至少一半）且单次 tokens 增幅 ≤50%」才建议改主应用，否则保持 1280。</span>
+  </div>
   <div id="imginfo"></div>
 </div>
 
@@ -84,16 +94,17 @@
   document.getElementById('file').addEventListener('change', function () {
     var f = this.files && this.files[0];
     if (!f) return;
-    QT.imagePipeline.compressFile(f).then(function (r) {
+    var maxEdge = Number(document.getElementById('edge').value) || 1280;
+    QT.imagePipeline.compressFile(f, { maxEdge: maxEdge }).then(function (r) {
       state.compressed = r.blob;
       var fr = new FileReader();
       fr.onload = function () { state.dataUrl = String(fr.result); };
       fr.readAsDataURL(r.blob);
       var url = URL.createObjectURL(r.blob);
       document.getElementById('imginfo').innerHTML =
-        '压缩后：' + r.w + '×' + r.h + '，' + (r.blob.size / 1024).toFixed(0) + ' KB，质量 ' + r.quality +
+        '压缩后（长边 ' + maxEdge + '）：' + r.w + '×' + r.h + '，' + (r.blob.size / 1024).toFixed(0) + ' KB，质量 ' + r.quality +
         '<br><img id="prev" src="' + url + '" style="max-height:220px">';
-      log('压缩完成 ' + r.w + '×' + r.h + ' ' + (r.blob.size / 1024).toFixed(0) + 'KB q=' + r.quality, 'ok');
+      log('压缩完成 长边' + maxEdge + ' ' + r.w + '×' + r.h + ' ' + (r.blob.size / 1024).toFixed(0) + 'KB q=' + r.quality, 'ok');
     }).catch(function (e) {
       log('压缩失败：' + (e.message || e), 'err');
     });

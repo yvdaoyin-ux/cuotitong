@@ -832,3 +832,19 @@ html, body {
 .fbar__tool { height: 36px; min-height: 36px; }
 /* grid 子项默认 min-width:auto 不收缩，导致 ⏭/↶ 被挤出视口——必须显式放开 */
 .fbar__top { min-width: 0; }
+
+/* ============================================================
+ * A0（第四份任务书）：hidden 属性必须真正隐藏。
+ * .btn 的 display:inline-flex 曾压过 UA 的 [hidden]{display:none}，
+ * 导致无密钥版「识别文字」按钮 hidden 了仍然可见——全局规则一劳永逸。
+ * ============================================================ */
+[hidden] { display: none !important; }
+
+/* OCR 页面内弹层（识别结果三选一 / 口令解锁）——不用 confirm()，可输入、可三选 */
+.ocr-overlay { position: fixed; left: 0; right: 0; top: 0; bottom: 0; background: rgba(0,0,0,.45); z-index: 90; display: flex; align-items: center; justify-content: center; padding: 16px; }
+.ocr-dialog { background: #fff; border-radius: 12px; padding: 16px; max-width: 340px; width: 100%; font-size: 15px; line-height: 1.6; }
+.ocr-dialog__title { font-weight: 600; margin-bottom: 8px; }
+.ocr-dialog__text { color: #444; }
+.ocr-dialog__btns { display: flex; gap: 8px; margin-top: 14px; }
+.ocr-dialog__btns .btn { flex: 1; }
+.ocr-input { width: 100%; box-sizing: border-box; padding: 10px; font-size: 16px; margin-top: 6px; border: 1px solid #ccc; border-radius: 8px; }

@@ -272,9 +272,9 @@ group('格式 · 时间截断与 CSV 转义', () => {
   test('CSV 含逗号时加引号', () => {
     const csv = E.buildEventsCsv(makeDb());
     // subject 是纯枚举，不会含逗号；这里验证表头与行数
-    // （阶段 4.1：CSV 增加 7 列埋点列 —— 旧断言的 6 列表头随之更新，见阶段 4 汇报「旧断言改动」）
+    // （阶段 4.1：+7 埋点列；第四份任务书 B3：再 +5 识别列 —— 旧断言表头随之更新，见第四份汇报「旧断言改动」）
     const lines = csv.split('\r\n');
-    assert.strictEqual(lines[0], '时间,事件类型,科目,题数,答对,答错,耗时ms,模式,工具栏点击,拍照,粘贴,题干字数,有来源');
+    assert.strictEqual(lines[0], '时间,事件类型,科目,题数,答对,答错,耗时ms,模式,工具栏点击,拍照,粘贴,题干字数,有来源,识别用过,识别点击,识别成功,识别耗时ms,识别字数');
     // 3 个白名单事件（app_open / quiz_finish / mistake_add）
     assert.strictEqual(lines.length, 4);
   });
@@ -283,8 +283,8 @@ group('格式 · 时间截断与 CSV 转义', () => {
     const csv = E.buildEventsCsv(makeDb());
     const quizLine = csv.split('\r\n').filter(function (l) { return l.indexOf('quiz_finish') >= 0; })[0];
     assert.ok(quizLine, '应有 quiz_finish 行');
-    // total=5, correct=3, skipped=1 → wrong=1；埋点列（7 列）对旧事件留空
-    assert.ok(quizLine.indexOf(',5,3,1,,,,,,,') > 0, '实际：' + quizLine);
+    // total=5, correct=3, skipped=1 → wrong=1；埋点列（7+5=12 列）对旧事件留空
+    assert.ok(/,5,3,1,{12}$/.test(quizLine), '实际：' + quizLine);
   });
 
   test('作答 CSV 表头与行数正确', () => {
@@ -391,6 +391,24 @@ group('🔴 隐私 · 阶段 4.1 录入埋点（entry_save 只有长度与计数
     // 旧事件（quiz_finish）的埋点列留空（逗号占位），不影响 Excel
     const quizRow = csv.split('\r\n')[2] || '';
     assert.ok(/(,){6,}/.test(quizRow), 'quiz_finish 行的埋点列应为空: ' + quizRow);
+  });
+
+  test('B3：entry_save 的识别列有值，且识别原文绝不进导出（白名单兜底）', () => {
+    const OCR_TEXT = '识别原文含手机号13800138000 与 $\\int_0^1 x^2dx$'; // 假设有人把识别原文塞进 payload
+    const db = { schemaVersion: 3, mistakes: [], answers: [], events: [
+      { type: 'entry_save', at: '2026-10-24T10:00:00Z', payload: {
+        ms: 30000, mode: 'quick', toolbarTaps: 0, usedPhoto: true,
+        pasted: false, stemLen: 37, hasSource: true,
+        ocrUsed: true, ocrClicks: 2, ocrOkCount: 1, ocrMsTotal: 2055, ocrChars: 37,
+        ocrText: OCR_TEXT // 未登记字段 → 必须被白名单丢弃
+      } }
+    ] };
+    const csv = E.buildEventsCsv(db);
+    assert.ok(csv.indexOf(',1,2,1,2055,37') > 0, '识别列应有值: ' + csv.split('\r\n')[1]);
+    assert.ok(csv.indexOf(OCR_TEXT) < 0, 'CSV 绝不能有识别原文');
+    const json = JSON.stringify(E.buildAnonymous(db, NOW));
+    assert.ok(json.indexOf(OCR_TEXT) < 0, '匿名 JSON 绝不能有识别原文');
+    assert.ok(json.indexOf('"ocrChars":37') > 0 && json.indexOf('"ocrUsed":true') > 0, 'JSON 应有识别计数字段');
   });
 });
 

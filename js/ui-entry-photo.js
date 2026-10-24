@@ -169,6 +169,52 @@
     if (cam) cam.click(); // 删掉这张立刻补拍
   }
 
+  /**
+   * A3（第四份任务书）：把某张图顺时针旋转 90°。
+   * 新拍图：原地替换 blob（同一 id）；已入库旧图：旧 id 进 removed、
+   * 旋转结果作为新图顶替其位置——与删除旧图一样要点「保存」才真正生效。
+   */
+  function rotateOne(id) {
+    var p = findPending(id);
+    if (p) {
+      pipeline.rotateBlob(p.blob, 90).then(function (r) {
+        URL.revokeObjectURL(p.url);
+        p.blob = r.blob;
+        p.record.blob = r.blob;
+        p.record.w = r.w;
+        p.record.h = r.h;
+        p.record.size = r.blob.size;
+        p.url = trackUrl(r.blob);
+        hideErr();
+        renderStrip();
+      }).catch(function (e) {
+        showErr('旋转失败：' + (e.message || e));
+      });
+      return;
+    }
+    if (isRemoved(id) || !store || !store.get) return;
+    store.get(id).then(function (rec) {
+      if (!rec || !rec.blob) return;
+      return pipeline.rotateBlob(rec.blob, 90).then(function (r) {
+        removed.push(id);
+        var nid = util.uid('img');
+        pending.push({
+          id: nid,
+          record: { id: nid, qid: null, blob: r.blob, w: r.w, h: r.h, size: r.blob.size, createdAt: util.nowIso() },
+          blob: r.blob,
+          url: trackUrl(r.blob)
+        });
+        var arr = draft.imageIds;
+        var i = arr.indexOf(id);
+        if (i >= 0) arr[i] = nid;
+        hideErr();
+        renderStrip();
+      });
+    }).catch(function (e) {
+      showErr('旋转失败：' + (e.message || e));
+    });
+  }
+
   /* ---------------- 保存时的提交 ---------------- */
 
   /**
@@ -323,10 +369,11 @@
       var isPending = !!findPending(id);
       var url = isPending ? findPending(id).url : existingUrls[id];
       if (!url) return;
-      var actions = [{ label: isPending ? '🗑 删除这张' : '🗑 删除这张', fn: function () { removeOne(id); } }];
+      var actions = [{ label: '↻ 旋转 90°', fn: function () { rotateOne(id); } }];
       if (isPending) {
-        actions.unshift({ label: '📷 重拍这张', fn: function () { retake(id); } });
+        actions.push({ label: '📷 重拍这张', fn: function () { retake(id); } });
       }
+      actions.push({ label: '🗑 删除这张', fn: function () { removeOne(id); } });
       QT.imageView.open({ urls: [url], actions: actions });
     });
 
