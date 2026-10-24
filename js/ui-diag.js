@@ -14,7 +14,13 @@
   var echartsLoading = false;
   var echartsCbs = [];
 
-  /** 确保 ECharts 已加载。加载失败（离线且缺文件）时降级为纯表格，不报错。 */
+  /**
+   * 确保 ECharts 已加载。加载失败（离线且缺文件）时降级为纯表格，不报错。
+   *
+   * 为什么要有占位提示：ECharts 压缩后约 1 MB，在 4G / 海外 CDN 慢的情况下
+   * 实测要 5~6 秒。这段时间如果图表区是一片空白，用户会以为坏了。
+   * 所以先放一句「图表加载中…」，加载完再覆盖。
+   */
   function ensureECharts(cb) {
     if (global.echarts) { cb(true); return; }
     echartsCbs.push(cb);
@@ -33,6 +39,17 @@
       echartsCbs = [];
     };
     document.head.appendChild(s);
+  }
+
+  /** 在图表容器里显示加载中的占位（仅首次加载 ECharts 时用）。 */
+  function showChartLoading() {
+    if (global.echarts) return;
+    ['ch-radar', 'ch-reason', 'ch-subject'].forEach(function (id) {
+      var box = document.getElementById(id);
+      if (!box || box.querySelector('canvas')) return;
+      box.innerHTML = '<div class="hint" style="padding-top:60px;text-align:center">' +
+        '图表加载中…（首次进入需下载约 1 MB 图表库）</div>';
+    });
   }
 
   /** 把知识点状态整理成按科目分组的表，按掌握度升序。 */
@@ -293,6 +310,8 @@
     var rows = collect(query.subject || '');
     var db = QT.storage.load();
     disposeCharts();
+    // 若 ECharts 还没下载完，先给个占位，避免图表区一片空白让人以为坏了
+    showChartLoading();
 
     ensureECharts(function (ok) {
       if (!ok) {
