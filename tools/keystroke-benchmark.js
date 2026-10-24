@@ -97,12 +97,12 @@ const RECIPES = [
     { t: 'type', s: ' A' }
   ],
   // 4. 设 $X\sim N(\mu,\sigma^2)$,求 $P(X>\mu+\sigma)$
+  //    v1.2 A4 起字母命令自动补空格，不再需要手补（上一版此处有一次 type ' '）
   [
     { t: 'type', s: '设 ' },
     { t: 'sym', tip: '包成行内公式 $…$' },
     { t: 'type', s: 'X' },
     { t: 'sym', tip: '服从于 ~' },
-    { t: 'type', s: ' ' },                 // 🔴 字母命令后手补空格，防止 \simN 粘连
     { t: 'sym', tip: '正态分布 N(μ,σ²)' },
     { t: 'end' },
     { t: 'type', s: ',求 ' },

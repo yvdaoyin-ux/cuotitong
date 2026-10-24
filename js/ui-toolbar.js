@@ -49,7 +49,7 @@
       var next = [tip].concat(loadRecent().filter(function (t) { return t !== tip; })).slice(0, RECENT_MAX);
       global.localStorage.setItem(RECENT_KEY, JSON.stringify(next));
     } catch (e) { /* 偏好失败不影响主流程 */ }
-    renderRecent();
+    if (toolbarEl) renderTabs(); // 「最近」标签的显隐与高亮跟着变
   }
 
   function itemByTip(tip) {
@@ -59,6 +59,8 @@
   }
 
   /* ---------------- DOM ---------------- */
+
+  var RECENT_GROUP = '__recent__'; // 「最近」不是真分组，是分组标签里的第一个虚拟标签
 
   function katexTex(item) {
     try {
@@ -74,30 +76,36 @@
       ' aria-label="' + util.esc(item.tip) + '">' + katexTex(item) + '</button>';
   }
 
-  function renderRecent() {
-    var box = toolbarEl.querySelector('#fbar-recent');
-    var tips = loadRecent();
-    if (!tips.length) { box.hidden = true; box.innerHTML = ''; return; }
-    box.hidden = false;
-    box.innerHTML = tips.map(function (tip) {
-      var item = itemByTip(tip);
-      return item ? symBtnHtml(item) : '';
-    }).join('');
-  }
+  function recentTips() { return loadRecent(); }
 
-  function renderGroup() {
-    var row = toolbarEl.querySelector('#fbar-syms');
-    row.innerHTML = QT.symbols.SYMBOLS.filter(function (s) { return s.group === activeGroup; })
-      .map(symBtnHtml).join('');
-  }
-
+  /** 分组标签行：有最近使用时「最近」排第一（v1.2 A2：不再独占一行）。 */
   function renderTabs() {
     var tabs = toolbarEl.querySelector('#fbar-tabs');
-    tabs.innerHTML = QT.symbols.GROUPS.map(function (g) {
+    var html = '';
+    if (recentTips().length) {
+      var on = activeGroup === RECENT_GROUP ? ' fbar__tab--on' : '';
+      html += '<button type="button" class="fbar__tab' + on + '" data-group="' + RECENT_GROUP + '">' +
+        '最近</button>';
+    }
+    html += QT.symbols.GROUPS.map(function (g) {
       var on = g === activeGroup ? ' fbar__tab--on' : '';
       return '<button type="button" class="fbar__tab' + on + '" data-group="' + util.esc(g) + '">' +
         util.esc(g) + '</button>';
     }).join('');
+    tabs.innerHTML = html;
+  }
+
+  function renderGroup() {
+    var row = toolbarEl.querySelector('#fbar-syms');
+    if (activeGroup === RECENT_GROUP) {
+      row.innerHTML = recentTips().map(function (tip) {
+        var item = itemByTip(tip);
+        return item ? symBtnHtml(item) : '';
+      }).join('');
+      return;
+    }
+    row.innerHTML = QT.symbols.SYMBOLS.filter(function (s) { return s.group === activeGroup; })
+      .map(symBtnHtml).join('');
   }
 
   function ensureToolbar() {
@@ -106,19 +114,18 @@
     toolbarEl.id = 'formula-bar';
     toolbarEl.className = 'fbar';
     toolbarEl.hidden = true;
+    // v1.2 A2 两行布局：第一行 = 分组标签（横滑）+ 右侧固定 ⏭/↶；第二行 = 符号按钮
     toolbarEl.innerHTML =
-      '<div class="fbar__row" id="fbar-recent" aria-label="最近使用"></div>' +
-      '<div class="fbar__tabs" id="fbar-tabs"></div>' +
-      '<div class="fbar__row" id="fbar-syms"></div>' +
-      '<div class="fbar__tools">' +
-        '<button type="button" class="fbar__tool" data-tool="next">⏭ 下一个占位</button>' +
-        '<button type="button" class="fbar__tool" data-tool="undo">↶ 撤销</button>' +
-      '</div>';
+      '<div class="fbar__top">' +
+        '<div class="fbar__tabs" id="fbar-tabs"></div>' +
+        '<button type="button" class="fbar__tool" data-tool="next" aria-label="下一个占位符">⏭</button>' +
+        '<button type="button" class="fbar__tool" data-tool="undo" aria-label="撤销上一步插入">↶</button>' +
+      '</div>' +
+      '<div class="fbar__row" id="fbar-syms"></div>';
     document.body.appendChild(toolbarEl);
     activeGroup = QT.symbols.GROUPS[0];
     renderTabs();
     renderGroup();
-    renderRecent();
 
     // 🔴 pointerdown + preventDefault：阻止焦点转移，输入法键盘不收起（任务书 2.2）
     // 所有动作都在 pointerdown 里做，click 一律忽略
@@ -204,11 +211,37 @@
   function show() {
     ensureToolbar();
     toolbarEl.hidden = false;
+    // v1.2 A2：给页面底部加与工具栏等高的 padding——让「可滚动范围」覆盖到工具栏上方，
+    // 用户可以滚到不被遮挡的位置（Claude 方案二选一里的 padding 方案；
+    // 上一版 scrollIntoView('nearest') 实测不感知 fixed 遮挡，弃用——见汇报调整 #1）
+    applyBodyPadding();
+    keepTextareaVisible();
   }
   function hide() {
     if (toolbarEl) toolbarEl.hidden = true;
     currentTa = null;
     undoStack = [];
+    document.body.style.paddingBottom = '';
+  }
+
+  function applyBodyPadding() {
+    if (!toolbarEl || toolbarEl.hidden) return;
+    var h = Math.round(toolbarEl.getBoundingClientRect().height);
+    document.body.style.paddingBottom = h + 'px';
+  }
+
+  /**
+   * 显式校正：输入框底边一旦被工具栏（fixed）盖住，就把页面滚到它完整露出为止。
+   * 原生聚焦滚动是 nearest 语义，不感知 fixed 遮挡——实测必须自己校正。
+   * （body padding 只保证「能滚到」，这里保证「真滚到」。）
+   */
+  function keepTextareaVisible() {
+    if (!currentTa || !toolbarEl || toolbarEl.hidden) return;
+    var barTop = toolbarEl.getBoundingClientRect().top;
+    var r = currentTa.getBoundingClientRect();
+    if (r.bottom > barTop) {
+      global.scrollBy(0, Math.ceil(r.bottom - barTop + 8));
+    }
   }
 
   function bindGlobal() {
@@ -242,8 +275,19 @@
       // 软键盘把可视视口顶上去多少，工具栏就抬多少
       var overlap = global.innerHeight - vv.height - vv.offsetTop;
       toolbarEl.style.bottom = Math.max(0, Math.round(overlap)) + 'px';
+      // 底部 padding 同步抬高（工具栏 bottom + 自身高度），
+      // 保证焦点元素始终能滚到工具栏上方
+      applyBodyPadding();
+      // 🔴 这里只调 padding 不做滚动校正：用户聚焦后有权自由滚动查看别处，
+      //    跟着滚事件校正会强行把页面拉回输入框（v1.2 实测踩到）。
+      //    校正只在「聚焦瞬间」（show）和「键盘尺寸变化」（resize→onResize）做。
     };
-    vv.addEventListener('resize', follow);
+    var onResize = function () {
+      if (!toolbarEl || toolbarEl.hidden) return;
+      follow();
+      keepTextareaVisible(); // 键盘弹出/收起时校正一次
+    };
+    vv.addEventListener('resize', onResize);
     vv.addEventListener('scroll', follow);
   }
 

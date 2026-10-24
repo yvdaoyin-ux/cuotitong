@@ -758,3 +758,77 @@ html, body {
 
 /* 打印/复制场景不出现（fixed 元素默认就不进打印流，这里兜底） */
 @media print { .fbar { display: none !important; } }
+
+/* ================= v1.2 修复（Claude 第三份任务书 A1/A2/A3） ================= */
+
+/* A1：列表缩略图改整宽预览——96px cover 会把题目裁到认不出 */
+.imgstrip--list { display: block; }
+.imgthumb--wide {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 180px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #f2f3f5; /* 浅灰底：contain 后的留白区 */
+  overflow: hidden;
+  cursor: pointer;
+  position: relative;
+}
+.imgthumb--wide img {
+  width: 100%;
+  height: 100%;
+  max-height: 180px;
+  object-fit: contain; /* 完整显示，不裁切 */
+  display: block;
+}
+.imgthumb__count {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  background: rgba(0, 0, 0, .55);
+  color: #fff;
+  font-size: 14px;
+  line-height: 1;
+  padding: 4px 8px;
+  border-radius: 10px;
+}
+
+/* A3：小按钮不换行（375px 下「添加」曾竖排成两行） */
+.btn--sm { white-space: nowrap; flex: none; }
+#add-kp { min-width: 64px; }
+
+/* A2：工具栏两行布局，总高 ≤120px（此前 4 行约 190-330px） */
+.fbar { padding: 6px 0 max(6px, env(safe-area-inset-bottom)); gap: 4px; }
+.fbar__top {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 0 8px;
+}
+.fbar__top .fbar__tabs {
+  flex: 1;
+  min-width: 0;      /* 允许在 flex 里横向滚动 */
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.fbar__top .fbar__tool {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  font-size: 16px;
+}
+/* 旧的第三行工具条样式已废弃（⏭/↶ 移入第一行），保留类名仅防旧缓存引用 */
+
+/* A2 实测修正：127px 超标 → 收紧行高与内边距 */
+.fbar { gap: 2px; padding: 4px 0 max(4px, env(safe-area-inset-bottom)); }
+.fbar__btn { padding: 2px 8px; }
+.fbar__btn .katex { font-size: .95em; }
+.fbar__tab { min-height: 36px; }
+.fbar__tool { height: 36px; min-height: 36px; }
+/* grid 子项默认 min-width:auto 不收缩，导致 ⏭/↶ 被挤出视口——必须显式放开 */
+.fbar__top { min-width: 0; }

@@ -38,20 +38,22 @@ function group(name, fn) { console.log('\n' + name); fn(); }
 /* ---------------- insertAt 基础 ---------------- */
 
 group('insertAt · 无占位符命令', () => {
+  // v1.2 A4 起：以字母命令结尾的模板插入后自动补一个空格（KaTeX 忽略之，显示不变），
+  // 下列期望文本均含尾空格 —— 旧断言改动原因单列于阶段汇报。
   test('光标在中间插入，光标停在插入文本末尾', () => {
     const r = S.insertAt('ab', 1, 1, '\\cdot', true);
-    assert.strictEqual(r.text, 'a\\cdotb');
-    assert.strictEqual(r.selStart, 6);
-    assert.strictEqual(r.selEnd, 6);
+    assert.strictEqual(r.text, 'a\\cdot b');
+    assert.strictEqual(r.selStart, 7);
+    assert.strictEqual(r.selEnd, 7);
   });
   test('空文本、光标 0（首边界）', () => {
     const r = S.insertAt('', 0, 0, '\\infty', true);
-    assert.strictEqual(r.text, '\\infty');
-    assert.strictEqual(r.selStart, 6);
+    assert.strictEqual(r.text, '\\infty ');
+    assert.strictEqual(r.selStart, 7);
   });
   test('光标在末尾（尾边界）', () => {
     const r = S.insertAt('x', 1, 1, '\\to', true);
-    assert.strictEqual(r.text, 'x\\to');
+    assert.strictEqual(r.text, 'x\\to ');
     assert.strictEqual(r.selEnd, r.text.length);
   });
   test('非公式区（insideMath=false）自动包 $…$', () => {
@@ -60,7 +62,7 @@ group('insertAt · 无占位符命令', () => {
   });
   test('公式区内（insideMath=true）不包 $', () => {
     const r = S.insertAt('$x$', 2, 2, '\\cdot', true);
-    assert.strictEqual(r.text, '$x\\cdot$');
+    assert.strictEqual(r.text, '$x\\cdot $');
   });
   test('$…$ 按钮本身以 $ 开头，永不双重包裹（无选中时 ▮ 保留）', () => {
     const r = S.insertAt('abc', 3, 3, '$' + PH + '$', false);
@@ -72,11 +74,12 @@ group('insertAt · 无占位符命令', () => {
   });
   test('selStart > selEnd 时钳到同一位置（textarea 不会出现反向选区，防御而已）', () => {
     const r = S.insertAt('abcd', 3, 1, '\\cdot', true);
-    assert.strictEqual(r.text, 'abc\\cdotd'); // 选区钳到 [3,3)，在 c 与 d 之间插入
+    assert.strictEqual(r.text, 'abc\\cdot d'); // 选区钳到 [3,3)，在 c 与 d 之间插入
   });
   test('越界光标被钳制到文本长度', () => {
     const r = S.insertAt('ab', 99, 99, '\\times', true);
-    assert.strictEqual(r.text, 'ab\\times');
+    assert.strictEqual(r.text, 'ab\\times ');
+    assert.strictEqual(r.selEnd, r.text.length);
   });
 });
 
@@ -141,6 +144,37 @@ group('insertAt · 占位符与选中内容', () => {
     // 接着插入分数：不会再包第二对 $
     const r2 = S.insertAt(r.text, r.selStart, r.selEnd, '\\frac{' + PH + '}{' + PH + '}', true);
     assert.strictEqual(r2.text, '证明 $\\sum_{n=1}^{\\infty}\\frac{' + PH + '}{' + PH + '}$');
+  });
+});
+
+group('A4 · 字母命令后自动补空格（v1.2）', () => {
+  test('\\sim 后接字母不再粘连：插入后紧跟 N 得到 \\sim N', () => {
+    const r = S.insertAt('$X', 3, 3, '\\sim', true);
+    assert.strictEqual(r.text, '$X\\sim ');
+    // 模拟用户接着打 N：不再产生 \simN
+    const p = r.selStart;
+    assert.strictEqual(r.text.slice(0, p) + 'N', '$X\\sim N');
+  });
+  test('\\sin / \\alpha / \\le 同理都带尾空格', () => {
+    assert.strictEqual(S.insertAt('', 0, 0, '\\sin', true).text, '\\sin ');
+    assert.strictEqual(S.insertAt('', 0, 0, '\\alpha', true).text, '\\alpha ');
+    assert.strictEqual(S.insertAt('', 0, 0, '\\le', true).text, '\\le ');
+  });
+  test('花括号/占位符结尾的模板不加空格（\\frac / \\sqrt）', () => {
+    assert.strictEqual(S.insertAt('', 0, 0, '\\frac{' + PH + '}{' + PH + '}', false).text,
+      '$\\frac{' + PH + '}{' + PH + '}$');
+    assert.strictEqual(S.insertAt('', 0, 0, '\\sqrt{' + PH + '}', false).text,
+      '$\\sqrt{' + PH + '}$');
+  });
+  test('必须在「非空文本 + 非零光标」下验证（上轮教训）', () => {
+    const r = S.insertAt('求 $x', 4, 4, '\\le', true);
+    assert.strictEqual(r.text, '求 $x\\le ');
+    assert.strictEqual(r.selStart, r.text.length);
+  });
+  test('auto-$ 包裹 + 尾空格组合：文本区点 \\cdot 得 $\\cdot $，光标在闭 $ 之前', () => {
+    const r = S.insertAt('a', 1, 1, '\\cdot', false);
+    assert.strictEqual(r.text, 'a$\\cdot $');
+    assert.strictEqual(r.selStart, r.text.length - 1, '光标应在闭 $ 之前');
   });
 });
 

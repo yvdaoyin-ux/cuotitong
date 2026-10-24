@@ -164,7 +164,15 @@
     selStart = Math.max(0, Math.min(Number(selStart) || 0, text.length));
     selEnd = Math.max(selStart, Math.min(Number(selEnd) || 0, text.length));
 
+    // 字母命令后自动补一个空格（v1.2 A4，Claude 裁定「不追认不处理」后的修正）：
+    // `\sim` + `N` 会被 KaTeX 当成未知命令 `\simN`；KaTeX 忽略命令后的空格，显示不变。
+    // 以字母命令结尾的模板必然不含 ▮（正则天然排除），花括号结尾的模板不受影响。
+    // 🔴 必须在 auto-$ 包裹**之前**做：包裹后模板以 $ 结尾，正则就永远匹配不上了，
+    //    空格必须落在 $ 之内（`$\cdot $`）而不是外面。
     var tpl = template;
+    if (/\\[A-Za-z]+$/.test(tpl)) {
+      tpl = tpl + ' ';
+    }
     // 自动补 $：文本区里插入公式命令必须自带分隔符，否则 KaTeX 看不到它
     if (!insideMath && tpl.charAt(0) !== '$') {
       tpl = '$' + tpl + '$';

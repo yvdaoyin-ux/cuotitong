@@ -55,21 +55,31 @@
         box.setAttribute('data-imgs-done', '1');
         var ids = box.getAttribute('data-img-ids').split(',').filter(Boolean);
         if (!ids.length) return;
+        // 列表模式（.imgstrip--list）：只显示第一张的整宽 contain 预览 + 「共 N 张」角标，
+        // 点击仍经全局委托打开查看器翻全部（v1.2 A1：原来 96px cover 裁切看不出是哪道题）
+        var listMode = box.classList.contains('imgstrip--list');
         var chain = Promise.resolve();
         ids.forEach(function (id, i) {
+          if (listMode && i > 0) return; // 列表只取第一张
           chain = chain.then(function () {
             return store.get(id).then(function (rec) {
               if (!rec || !rec.blob) return; // 图片缺失（如导入的备份没带图）时安静跳过
               urlByImageId[id] = urlFor(rec.blob);
               var btn = document.createElement('button');
               btn.type = 'button';
-              btn.className = 'imgthumb';
+              btn.className = listMode ? 'imgthumb imgthumb--wide' : 'imgthumb';
               btn.setAttribute('data-view', id);
               btn.setAttribute('aria-label', '查看第 ' + (i + 1) + ' 张图片');
               var img = document.createElement('img');
               img.alt = '题目图片';
               img.src = urlByImageId[id];
               btn.appendChild(img);
+              if (listMode && ids.length > 1) {
+                var badge = document.createElement('span');
+                badge.className = 'imgthumb__count';
+                badge.textContent = '共 ' + ids.length + ' 张';
+                btn.appendChild(badge);
+              }
               box.appendChild(btn);
             });
           });
