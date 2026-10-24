@@ -41,7 +41,16 @@
     total: 'number',   // 本次共答题数
     correct: 'number',
     skipped: 'number',
-    count: 'number'
+    count: 'number',
+    // —— 阶段 4.1 录入埋点（只有长度与计数，绝无文本）——
+    ms: 'number',          // 录入耗时毫秒（首次焦点 → 保存）
+    mode: 'enum',          // quick | full | continue
+    toolbarTaps: 'number', // 工具栏点击次数
+    usedPhoto: 'boolean',  // 是否用了拍照
+    photoCount: 'number',  // 照片张数
+    pasted: 'boolean',     // 是否有粘贴动作
+    stemLen: 'number',     // 题干字数（非内容本身）
+    hasSource: 'boolean'   // 是否填了来源
   };
 
   /** 事件类型白名单。未知类型直接丢弃，避免未来误加的高危埋点被带出去。 */
@@ -58,7 +67,9 @@
     backup_import: true,
     print_sheet: true,
     sample_load: true,
-    sample_clear: true
+    sample_clear: true,
+    entry_open: true,
+    entry_save: true
   };
 
   /** 只保留白名单字段，且做类型收敛。 */
@@ -226,11 +237,12 @@
 
   /**
    * 生成事件级 CSV（供 Excel / 统计软件直接读）。
-   * 只含 4 列，全部是结构性数据。
+   * 阶段 4.1 起新增录入埋点列（只有耗时/计数/布尔，无任何文本），
+   * 旧事件这些列留空 —— 列固定，Excel 透视不受影响。
    */
   function buildEventsCsv(db) {
     var events = (db && Array.isArray(db.events)) ? db.events : [];
-    var lines = ['时间,事件类型,科目,题数,答对,答错'];
+    var lines = ['时间,事件类型,科目,题数,答对,答错,耗时ms,模式,工具栏点击,拍照,粘贴,题干字数,有来源'];
     events.forEach(function (e) {
       if (!e || !EVENT_ALLOW[e.type]) return;
       var p = cleanPayload(e.payload);
@@ -240,13 +252,21 @@
       if (p.total != null && p.correct != null) {
         wrong = Math.max(0, p.total - p.correct - (p.skipped || 0));
       }
+      var bool = function (v) { return v === true ? '1' : (v === false ? '0' : ''); };
       lines.push([
         csvCell(trimTime(e.at)),
         csvCell(e.type),
         csvCell(p.subject || ''),
         csvCell(total),
         csvCell(correct),
-        csvCell(wrong)
+        csvCell(wrong),
+        csvCell(p.ms != null ? p.ms : ''),
+        csvCell(p.mode || ''),
+        csvCell(p.toolbarTaps != null ? p.toolbarTaps : ''),
+        csvCell(bool(p.usedPhoto)),
+        csvCell(bool(p.pasted)),
+        csvCell(p.stemLen != null ? p.stemLen : ''),
+        csvCell(bool(p.hasSource))
       ].join(','));
     });
     return lines.join('\r\n');

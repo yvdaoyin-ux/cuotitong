@@ -272,8 +272,9 @@ group('格式 · 时间截断与 CSV 转义', () => {
   test('CSV 含逗号时加引号', () => {
     const csv = E.buildEventsCsv(makeDb());
     // subject 是纯枚举，不会含逗号；这里验证表头与行数
+    // （阶段 4.1：CSV 增加 7 列埋点列 —— 旧断言的 6 列表头随之更新，见阶段 4 汇报「旧断言改动」）
     const lines = csv.split('\r\n');
-    assert.strictEqual(lines[0], '时间,事件类型,科目,题数,答对,答错');
+    assert.strictEqual(lines[0], '时间,事件类型,科目,题数,答对,答错,耗时ms,模式,工具栏点击,拍照,粘贴,题干字数,有来源');
     // 3 个白名单事件（app_open / quiz_finish / mistake_add）
     assert.strictEqual(lines.length, 4);
   });
@@ -282,8 +283,8 @@ group('格式 · 时间截断与 CSV 转义', () => {
     const csv = E.buildEventsCsv(makeDb());
     const quizLine = csv.split('\r\n').filter(function (l) { return l.indexOf('quiz_finish') >= 0; })[0];
     assert.ok(quizLine, '应有 quiz_finish 行');
-    // total=5, correct=3, skipped=1 → wrong=1
-    assert.ok(quizLine.endsWith(',5,3,1'), '实际：' + quizLine);
+    // total=5, correct=3, skipped=1 → wrong=1；埋点列（7 列）对旧事件留空
+    assert.ok(quizLine.indexOf(',5,3,1,,,,,,,') > 0, '实际：' + quizLine);
   });
 
   test('作答 CSV 表头与行数正确', () => {
@@ -325,6 +326,71 @@ group('白名单 · 默认不导出', () => {
 
   test('payload 为 null 时返回空对象', () => {
     assert.deepStrictEqual(E.cleanPayload(null), {});
+  });
+});
+
+group('🔴 隐私 · 阶段 4.1 录入埋点（entry_save 只有长度与计数）', () => {
+  const SENSITIVE_STEM = '绝密题干我的身份证号码';
+  const SENSITIVE_SOURCE = '绝密来源华师大P87';
+
+  test('entry_save 事件 payload 里的白名单字段正常导出（数字/枚举/布尔）', () => {
+    const db = { schemaVersion: 3, mistakes: [], answers: [], events: [
+      { type: 'entry_save', at: '2026-10-24T10:00:00Z', payload: {
+        ms: 42000, mode: 'continue', toolbarTaps: 3, usedPhoto: true,
+        photoCount: 2, pasted: false, stemLen: 45, hasSource: true
+      } }
+    ] };
+    const out = E.buildAnonymous(db, '2026-10-24T10:01:00Z');
+    const ev = out.events[0];
+    assert.strictEqual(ev.type, 'entry_save');
+    assert.strictEqual(ev.payload.ms, 42000);
+    assert.strictEqual(ev.payload.mode, 'continue');
+    assert.strictEqual(ev.payload.toolbarTaps, 3);
+    assert.strictEqual(ev.payload.usedPhoto, true);
+    assert.strictEqual(ev.payload.photoCount, 2);
+    assert.strictEqual(ev.payload.stemLen, 45);
+    assert.strictEqual(ev.payload.hasSource, true);
+  });
+
+  test('entry_save 事件混入文本字段（题干/来源原文）也会被白名单丢弃', () => {
+    const db = { schemaVersion: 3, mistakes: [], answers: [], events: [
+      { type: 'entry_save', at: '2026-10-24T10:00:00Z', payload: {
+        ms: 1000, mode: 'quick', stemLen: 2,
+        stem: SENSITIVE_STEM, source: SENSITIVE_SOURCE, myAnswer: '绝密答案'
+      } }
+    ] };
+    const json = JSON.stringify(E.buildAnonymous(db, '2026-10-24T10:01:00Z'));
+    assert.ok(!json.includes(SENSITIVE_STEM), '题干原文绝不能出现在导出里');
+    assert.ok(!json.includes(SENSITIVE_SOURCE), '来源原文绝不能出现在导出里');
+    assert.ok(!json.includes('绝密答案'), '答案原文绝不能出现在导出里');
+    assert.ok(!json.includes('"stem"'), '连字段名都不该出现');
+  });
+
+  test('entry_open 事件进白名单（无 payload 也导出）', () => {
+    const db = { schemaVersion: 3, mistakes: [], answers: [], events: [
+      { type: 'entry_open', at: '2026-10-24T10:00:00Z', payload: {} }
+    ] };
+    const out = E.buildAnonymous(db, '2026-10-24T10:01:00Z');
+    assert.strictEqual(out.events.length, 1);
+    assert.strictEqual(out.events[0].type, 'entry_open');
+    assert.strictEqual(out.byEventType.entry_open, 1);
+  });
+
+  test('CSV：entry_save 行带新列（耗时/模式/点击/拍照/字数），且无文本', () => {
+    const db = { schemaVersion: 3, mistakes: [], answers: [], events: [
+      { type: 'entry_save', at: '2026-10-24T10:00:00Z', payload: {
+        ms: 42000, mode: 'full', toolbarTaps: 1, usedPhoto: false,
+        pasted: true, stemLen: 45, hasSource: false, stem: SENSITIVE_STEM
+      } },
+      { type: 'quiz_finish', at: '2026-10-24T10:05:00Z', payload: { total: 5, correct: 4 } }
+    ] };
+    const csv = E.buildEventsCsv(db);
+    assert.ok(csv.indexOf('时间,事件类型,科目,题数,答对,答错,耗时ms,模式,工具栏点击,拍照,粘贴,题干字数,有来源') === 0);
+    assert.ok(csv.indexOf('42000,full,1,0,1,45,0') > 0, 'entry_save 行应有埋点值');
+    assert.ok(csv.indexOf(SENSITIVE_STEM) < 0, 'CSV 里也不能有题干原文');
+    // 旧事件（quiz_finish）的埋点列留空（逗号占位），不影响 Excel
+    const quizRow = csv.split('\r\n')[2] || '';
+    assert.ok(/(,){6,}/.test(quizRow), 'quiz_finish 行的埋点列应为空: ' + quizRow);
   });
 });
 

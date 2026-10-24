@@ -71,6 +71,8 @@
           '<span>' + util.esc(util.fmtDate(m.createdAt)) + '</span>' +
           '<span class="mcard__acts">' +
             '<button class="btn btn--sm" data-edit="' + util.esc(m.id) + '">编辑</button>' +
+            '<button class="btn btn--sm" data-copy="' + util.esc(m.id) + '" ' +
+              'aria-label="复制为新题">复制</button>' +
           '</span>' +
         '</div>' +
       '</div>';
@@ -168,8 +170,10 @@
 
     el.addEventListener('click', function (ev) {
       var btn = ev.target.closest('[data-edit]');
-      if (!btn) return;
-      QT.app.go('entry', { id: btn.getAttribute('data-edit') });
+      if (btn) { QT.app.go('entry', { id: btn.getAttribute('data-edit') }); return; }
+      // 复制为新题（阶段 1 遗留项）：带科目/知识点/错因，内容清空
+      var copyBtn = ev.target.closest('[data-copy]');
+      if (copyBtn) { QT.app.go('entry', { copyFrom: copyBtn.getAttribute('data-copy') }); }
     });
   }
 

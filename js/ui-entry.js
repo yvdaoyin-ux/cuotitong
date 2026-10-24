@@ -2,15 +2,12 @@
  * ui-entry.js —— 录题 / 编辑错题
  *
  * 路由：#/entry            新增（默认极速模式）
- *       #/entry?id=xxx     编辑（默认完整模式，Claude 第二份任务书明确要求）
+ *       #/entry?id=xxx     编辑（默认完整模式）
+ *       #/entry?copyFrom=x 复制为新题（带科目/知识点/错因，内容清空，阶段 1 遗留项本轮补上）
  *
- * 极速模式 vs 完整模式：
- *   - 极速：来源 + 知识点 + 错因 + 保存。题干/答案/解析收进「展开详细填写」折叠区。
- *   - 完整：题干 + 我的答案 + 解析全展开。
- *   两者共用同一套数据结构，只是布局与默认展开状态不同。
- *
- * 校验规则（v3）：知识点 ≥1，且（题干 / 来源 / 图片至少一项非空）。
- * 三项全空 → 不保存，来源框下方红字提示，焦点移到来源框（Claude 裁定，不用 toast）。
+ * 极速模式 vs 完整模式：极速只留 来源 + 知识点 + 错因 + 保存（题干等收进折叠区）；
+ * 完整全部展开。校验（v3）：知识点 ≥1 且（题干 / 来源 / 图片至少一项非空），
+ * 三项全空 → 来源框下红字提示 + 焦点回来源框。保存前检查公式工具栏残留 ▮。
  */
 (function (global) {
   'use strict';
@@ -49,10 +46,7 @@
   function newDraft() {
     // 记住上次用的科目和知识点（极速录入提速）
     var lastSubject = null, lastKpIds = [];
-    try {
-      lastSubject = global.localStorage && global.localStorage.getItem('qt:lastSubject');
-      lastKpIds = loadRecent();
-    } catch (e) { /* ignore */ }
+    try { lastSubject = global.localStorage && global.localStorage.getItem('qt:lastSubject'); lastKpIds = loadRecent(); } catch (e) { /* ignore */ }
     var subject = lastSubject || QT.data.SUBJECTS[0].id;
     // 上次的知识点要过滤掉不属于当前科目的
     var valid = QT.storage.kpsBySubject(subject).map(function (k) { return k.id; });
@@ -78,6 +72,21 @@
       // 编辑时默认完整模式（Claude 明确要求）
       entryMode: 'full',
       imageIds: (m.imageIds || []).slice()
+    };
+  }
+
+  /** 「复制为新题」（阶段 1 遗留项）：带科目/知识点/错因，内容清空，进极速模式。 */
+  function copyDraft(srcId) {
+    var src = QT.storage.getMistake(srcId);
+    if (!src) return newDraft();
+    return {
+      id: null,
+      subject: src.subject || QT.data.SUBJECTS[0].id,
+      kpIds: (src.kpIds || []).slice(),
+      reason: src.reason || '',
+      source: '',
+      entryMode: 'quick',
+      imageIds: []
     };
   }
 
@@ -153,11 +162,10 @@
       editing = QT.storage.getMistake(query.id);
       if (!editing) {
         return '<div class="card"><div class="placeholder__title">错题不存在</div>' +
-          '<p class="muted">可能已被删除。</p>' +
-          '<button class="btn btn--sm" data-go="list">返回错题本</button></div>';
+          '<p class="muted">可能已被删除。</p><button class="btn btn--sm" data-go="list">返回错题本</button></div>';
       }
     }
-    draft = editing ? draftFrom(editing) : newDraft();
+    draft = editing ? draftFrom(editing) : (query && query.copyFrom ? copyDraft(query.copyFrom) : newDraft());
     isEditing = !!editing;
     var quick = draft.entryMode === 'quick';
 
@@ -270,6 +278,9 @@
     var kpBox = el.querySelector('#kp-chips');
     var subjectSel = el.querySelector('#f-subject');
 
+    // 埋点：entry_open（每次打开录题页一条；表单不存在时不记）
+    if (QT.entryMetrics) QT.entryMetrics.opened(el);
+
     // —— 科目切换：重建知识点（已选但不在新科目下的丢弃）——
     subjectSel.addEventListener('change', function (ev) {
       draft.subject = ev.target.value;
@@ -277,10 +288,7 @@
       draft.kpIds = draft.kpIds.filter(function (id) { return valid.indexOf(id) >= 0; });
       kpBox.innerHTML = kpChipsHtml(draft.subject, draft.kpIds, '');
       var recent = el.querySelector('#recent-chips');
-      if (recent) {
-        var parent = recent.parentNode;
-        parent.innerHTML = recentChipsHtml(draft.subject, draft.kpIds) + parent.innerHTML;
-      }
+      if (recent) recent.parentNode.innerHTML = recentChipsHtml(draft.subject, draft.kpIds) + recent.parentNode.innerHTML;
     });
 
     // —— 知识点搜索 ——
@@ -349,9 +357,7 @@
       var box = el.querySelector('#prev-' + fieldId);
       if (!textarea || !box) return;
       if (previewTimers[fieldId]) clearTimeout(previewTimers[fieldId]);
-      previewTimers[fieldId] = setTimeout(function () {
-        updatePreview(fieldId);
-      }, 150);
+      previewTimers[fieldId] = setTimeout(function () { updatePreview(fieldId); }, 150);
     }
     function updatePreview(fieldId) {
       var textarea = el.querySelector('#f-' + fieldId);
@@ -393,10 +399,8 @@
     }
 
     function showSourceError() {
-      var err = el.querySelector('#source-err');
-      err.hidden = false;
-      var src = el.querySelector('#f-source');
-      src.focus();
+      el.querySelector('#source-err').hidden = false;
+      el.querySelector('#f-source').focus();
     }
     function clearSourceError() {
       var err = el.querySelector('#source-err');
@@ -415,36 +419,32 @@
         showSourceError();
         return;
       }
+      // 公式工具栏残留占位符 ▮：保存前弹一次确认（任务书 2.2）
+      if (QT.toolbar && !QT.toolbar.guardResidual(payload)) return;
       try {
         if (draft.id) {
           QT.storage.updateMistake(draft.id, payload);
           QT.storage.logEvent('mistake_update', { id: draft.id });
+          if (QT.entryMetrics) QT.entryMetrics.saved(payload, draft.entryMode);
           if (QT.entryPhoto) await QT.entryPhoto.saveFor(draft.id);
           util.toast('已保存修改');
           QT.app.go('list');
         } else {
           var m = QT.storage.addMistake(payload);
           saveRecent(payload.kpIds);
-          try {
-            global.localStorage && global.localStorage.setItem('qt:lastSubject', payload.subject);
-          } catch (e) { /* ignore */ }
+          try { global.localStorage && global.localStorage.setItem('qt:lastSubject', payload.subject); } catch (e) { /* ignore */ }
           QT.storage.logEvent('mistake_add', { subject: m.subject, kpCount: m.kpIds.length });
+          if (QT.entryMetrics) QT.entryMetrics.saved(payload, returnToList ? draft.entryMode : 'continue');
           if (QT.entryPhoto) await QT.entryPhoto.saveFor(m.id);
           saveCount += 1;
           if (returnToList) {
             util.toast('已保存第 ' + saveCount + ' 题');
             QT.app.go('list');
           } else {
-            // 保存并继续：保留科目/知识点/错因与照片池清空，文本清空，焦点回来源框
+            // 保存并继续：保留科目/知识点/错因，照片池清空，文本清空，焦点回来源框
             util.toast('已保存第 ' + saveCount + ' 题');
-            el.querySelector('#f-source').value = '';
-            el.querySelector('#f-stem').value = '';
-            el.querySelector('#f-my').value = '';
-            el.querySelector('#f-correct').value = '';
-            ['stem', 'my', 'correct'].forEach(function (fid) {
-              var box = el.querySelector('#prev-' + fid);
-              if (box) box.hidden = true;
-            });
+            ['#f-source', '#f-stem', '#f-my', '#f-correct'].forEach(function (sel) { el.querySelector(sel).value = ''; });
+            ['stem', 'my', 'correct'].forEach(function (fid) { var box = el.querySelector('#prev-' + fid); if (box) box.hidden = true; });
             if (QT.entryPhoto) QT.entryPhoto.reset();
             el.querySelector('#f-source').focus();
             global.scrollTo(0, 0);

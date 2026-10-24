@@ -672,3 +672,89 @@ html, body {
   .print-item__imgs { break-inside: avoid; page-break-inside: avoid; }
   .print-item__imgs .imgthumb { display: block; margin-bottom: 6px; }
 }
+
+/* ================= 阶段 2：公式工具栏 ================= */
+
+.fbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 56px; /* 标签栏上方；软键盘弹出时由 visualViewport 跟随调高 */
+  z-index: 60;
+  background: #fff;
+  border-top: 1px solid var(--line);
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, .08);
+  padding: 6px 0 max(6px, env(safe-area-inset-bottom));
+  display: grid;
+  gap: 6px;
+  user-select: none;
+}
+.fbar[hidden] { display: none; }
+
+.fbar__row {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 0 8px;
+  -webkit-overflow-scrolling: touch;
+}
+.fbar__row:empty { display: none; }
+
+.fbar__btn {
+  flex: 0 0 auto;
+  min-height: 40px;
+  min-width: 40px;
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f7f8fa;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.fbar__btn .katex { font-size: 1em; }
+
+.fbar__tabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 0 8px;
+  -webkit-overflow-scrolling: touch;
+}
+.fbar__tab {
+  flex: 0 0 auto;
+  min-height: 40px;
+  padding: 4px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  font-size: 14px;
+  color: var(--text-2);
+  cursor: pointer;
+}
+.fbar__tab--on {
+  background: var(--brand-weak, #eef3fe);
+  color: var(--brand);
+  border-color: var(--brand);
+  font-weight: 600;
+}
+
+.fbar__tools {
+  display: flex;
+  gap: 6px;
+  padding: 0 8px;
+}
+.fbar__tool {
+  flex: 1;
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+/* 打印/复制场景不出现（fixed 元素默认就不进打印流，这里兜底） */
+@media print { .fbar { display: none !important; } }
