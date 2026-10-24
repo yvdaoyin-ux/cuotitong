@@ -150,6 +150,54 @@ html, body {
   margin-top: 6px;
 }
 
+/* ---------------- 录题页：实时预览 / 错误提示 / 折叠区 ---------------- */
+
+.preview {
+  margin-top: 8px;
+  padding: 10px 12px;
+  background: #f7f8fa;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.preview__label {
+  font-size: 14px;
+  color: var(--text-2);
+  margin-bottom: 6px;
+}
+
+.preview__body {
+  font-size: 15px;
+  line-height: 1.7;
+  word-break: break-word;
+  overflow-x: auto;
+}
+
+/* 预览里的公式不要撑破容器 */
+.preview__body .katex-display { overflow-x: auto; overflow-y: hidden; padding: 4px 0; }
+
+.preview__error {
+  margin-top: 8px;
+  padding: 6px 10px;
+  font-size: 14px;
+  color: #b7791f;
+  background: #fff7e6;
+  border-radius: 6px;
+}
+
+.entry-err {
+  margin-top: 6px;
+  font-size: 14px;
+  color: var(--danger);
+}
+
+/* 折叠区展开按钮 */
+#toggle-detail {
+  justify-content: space-between;
+  color: var(--brand);
+  font-weight: 500;
+}
+
 /* 多选/单选小标签，做成大按钮形态，方便手机上点 */
 .chips {
   display: flex;

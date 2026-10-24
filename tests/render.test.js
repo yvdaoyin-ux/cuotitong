@@ -15,6 +15,9 @@ const path = require('node:path');
 
 global.QT = {};
 require(path.join(__dirname, '..', 'js', 'util.js'));
+// util.renderRichText 现已委托给 mathtext.renderRich，测试里必须加载它，
+// 否则会走「只转义不渲染」的兜底分支
+require(path.join(__dirname, '..', 'js', 'mathtext.js'));
 
 // 加载真实的 KaTeX（与浏览器里用的是同一份文件），确保测的是真行为
 const katex = require(path.join(__dirname, '..', 'lib', 'katex.min.js'));

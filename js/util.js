@@ -82,48 +82,21 @@
    * 安全性：公式以外的一切都经过 esc()，用户写 <script> 也不会被执行；
    * 公式本身交给 KaTeX 渲染（它输出的是它自己生成的安全 HTML）。
    */
+  /**
+   * 渲染纯文本为安全 HTML（含 KaTeX 公式）。
+   *
+   * 现在委托给 mathtext.renderRich，它会在渲染前先做规范化
+   * （全角转半角、`\(..\)`→`$..$`、中文包 \text{} 等），
+   * 旧数据同样受益。返回 HTML 字符串（mathtext 返回 {html,errors}，
+   * 这里取 html，错误信息不抛出，公式失败时退化为源码但不丢内容）。
+   */
   function renderRichText(text) {
-    var src = text == null ? '' : String(text);
-    var katex = global.katex;
-    var canTypeset = katex && typeof katex.renderToString === 'function';
-
-    // 没有 KaTeX 时直接转义，公式保持源码可读
-    if (!canTypeset) {
-      return esc(src).replace(/\n/g, '<br>');
+    var mt = QT.mathtext;
+    if (mt && typeof mt.renderRich === 'function') {
+      return mt.renderRich(text).html;
     }
-
-    var parts = [];
-    var PH = '\u0000MATH\u0000'; // 占位符：不会与用户文本冲突
-
-    // ① 在**原文**上抽取公式（先 $$ 块级，再 $ 行内）
-    var staged = src.replace(/\$\$([\s\S]+?)\$\$/g, function (m, body) {
-      parts.push({ body: body, display: true });
-      return PH + (parts.length - 1) + PH;
-    });
-    staged = staged.replace(/\$([^$\n]+?)\$/g, function (m, body) {
-      parts.push({ body: body, display: false });
-      return PH + (parts.length - 1) + PH;
-    });
-
-    // ② 转义剩下的普通文本
-    var safe = esc(staged);
-
-    // ③ 把占位符换回 KaTeX 渲染结果
-    safe = safe.replace(/\u0000MATH\u0000(\d+)\u0000MATH\u0000/g, function (m, idx) {
-      var item = parts[Number(idx)];
-      if (!item) return '';
-      try {
-        return katex.renderToString(item.body, {
-          displayMode: item.display,
-          throwOnError: false
-        });
-      } catch (e) {
-        // 渲染失败就退回源码，但不丢内容
-        return esc((item.display ? '$$' : '$') + item.body + (item.display ? '$$' : '$'));
-      }
-    });
-
-    return safe.replace(/\n/g, '<br>');
+    // 兜底：mathtext 未加载时（理论上不会发生，加载顺序里它在前）
+    return esc(text == null ? '' : String(text)).replace(/\n/g, '<br>');
   }
 
   /* ---------------- 轻量 UI 反馈 ---------------- */

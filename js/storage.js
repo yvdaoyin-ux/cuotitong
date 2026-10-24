@@ -18,7 +18,7 @@
   var util = QT.util;
 
   var DB_KEY = 'qt:db';
-  var SCHEMA_VERSION = 2;
+  var SCHEMA_VERSION = 3;
 
   /* ---------------- 存储后端 ---------------- */
   // 浏览器用 localStorage；Node 测试可注入内存后端。
@@ -163,6 +163,32 @@
       });
 
       return db;
+    },
+
+    /**
+     * v2 → v3：录题效率专项新增三个字段。
+     *
+     *   source       来源描述（如「数分(华师大)P87 习题3(2)」），可空
+     *   entryMode    'quick' | 'full'，旧数据一律补 'full'（它们都是完整录入的）
+     *   imageIds     关联的图片 id 数组，默认 []
+     *
+     * 同时允许 stem 为空字符串（极速模式下题干选填）——
+     * 这是**放宽约束**，不需要改旧数据，旧题目的 stem 本来就非空。
+     *
+     * 幂等性：本函数只「补缺失字段」，不覆盖已有值，
+     * 因此连续执行两次结果相同（有测试覆盖）。
+     */
+    2: function (db) {
+      db.mistakes.forEach(function (m) {
+        if (typeof m.source !== 'string') m.source = '';
+        if (m.source.length > 60) m.source = m.source.slice(0, 60);
+        if (m.entryMode !== 'quick' && m.entryMode !== 'full') m.entryMode = 'full';
+        if (!Array.isArray(m.imageIds)) m.imageIds = [];
+        // 只保留字符串 id，过滤掉手工编辑 JSON 时可能混入的脏数据
+        m.imageIds = m.imageIds.filter(function (id) { return typeof id === 'string' && id; });
+        if (typeof m.stem !== 'string') m.stem = '';
+      });
+      return db;
     }
   };
 
@@ -199,9 +225,15 @@
     // 逐条补默认值，防止手工导入的 JSON 缺字段导致界面崩
     db.mistakes.forEach(function (m) {
       m.kpIds = Array.isArray(m.kpIds) ? m.kpIds : [];
+      // stem 允许为空（v3 极速模式，题干选填）
+      if (typeof m.stem !== 'string') m.stem = '';
       m.myAnswer = m.myAnswer || '';
       m.correctAnswer = m.correctAnswer || '';
       m.reason = m.reason || '';
+      // v3 新增字段：这里也补一遍，保证「导入旧备份后不经迁移直接渲染」也不崩
+      if (typeof m.source !== 'string') m.source = '';
+      if (m.entryMode !== 'quick' && m.entryMode !== 'full') m.entryMode = 'full';
+      if (!Array.isArray(m.imageIds)) m.imageIds = [];
       m.createdAt = m.createdAt || util.nowIso();
       m.updatedAt = m.updatedAt || m.createdAt;
     });
@@ -291,10 +323,24 @@
    * 新增错题，同时写入一条「录入即答错」的作答事件。
    * @returns {object} 新建的错题
    */
+  /**
+   * 新增错题，同时写入一条「录入即答错」的作答事件。
+   *
+   * 校验规则（v3 起）：知识点 ≥1，且 **题干 / 来源 / 图片至少一项非空**。
+   * 这与 Claude 第二份任务书的规则一致：三项全空的数据不应该存在。
+   *
+   * @returns {object} 新建的错题
+   */
   function addMistake(input) {
     var kpIds = Array.isArray(input.kpIds) ? input.kpIds.filter(Boolean) : [];
-    if (!input.stem || !String(input.stem).trim()) throw new Error('题干不能为空');
+    var stem = String(input.stem == null ? '' : input.stem).trim();
+    var source = String(input.source == null ? '' : input.source).trim();
+    var imageIds = Array.isArray(input.imageIds) ? input.imageIds.filter(Boolean) : [];
+
     if (!kpIds.length) throw new Error('请至少选择一个知识点');
+    if (!stem && !source && !imageIds.length) {
+      throw new Error('请填写题干、来源或添加图片之一');
+    }
 
     return mutate(function (db) {
       // 允许指定创建时间：只有演示数据会用到，用来构造「几天前录的题」这种时间线
@@ -303,10 +349,14 @@
         id: util.uid('m'),
         subject: input.subject,
         kpIds: kpIds,
-        stem: String(input.stem).trim(),
+        stem: stem,
         myAnswer: String(input.myAnswer || '').trim(),
         correctAnswer: String(input.correctAnswer || '').trim(),
         reason: input.reason || '',
+        // v3 新增三个字段
+        source: source.slice(0, 60),
+        entryMode: input.entryMode === 'quick' ? 'quick' : 'full',
+        imageIds: imageIds,
         createdAt: now,
         updatedAt: now
       };
@@ -340,6 +390,10 @@
       if (patch.correctAnswer != null) m.correctAnswer = String(patch.correctAnswer).trim();
       if (patch.reason != null) m.reason = patch.reason;
       if (patch.subject != null) m.subject = patch.subject;
+      // v3 新增字段
+      if (patch.source != null) m.source = String(patch.source).trim().slice(0, 60);
+      if (patch.entryMode === 'quick' || patch.entryMode === 'full') m.entryMode = patch.entryMode;
+      if (Array.isArray(patch.imageIds)) m.imageIds = patch.imageIds.filter(Boolean);
       if (Array.isArray(patch.kpIds)) m.kpIds = patch.kpIds.filter(Boolean);
       m.updatedAt = util.nowIso();
       return m;

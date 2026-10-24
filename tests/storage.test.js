@@ -70,10 +70,45 @@ group('基础 · 错题 CRUD', () => {
     assert.strictEqual(a.kind, 'intake');
   });
 
-  test('题干为空时拒绝保存', () => {
+  // v3 起校验规则变化：不再要求「题干必填」，
+  // 而是「题干 / 来源 / 图片至少一项非空」（Claude 第二份任务书明确要求）。
+  test('题干、来源、图片三项全空时拒绝保存', () => {
     freshBackend();
     const kp = S.kpsBySubject('matan')[0];
-    assert.throws(() => S.addMistake({ subject: 'matan', kpIds: [kp.id], stem: '   ' }), /题干不能为空/);
+    assert.throws(
+      () => S.addMistake({ subject: 'matan', kpIds: [kp.id], stem: '   ' }),
+      /请填写题干、来源或添加图片之一/
+    );
+  });
+
+  test('只有来源、没有题干，可以保存（极速模式）', () => {
+    freshBackend();
+    const kp = S.kpsBySubject('matan')[0];
+    const m = S.addMistake({
+      subject: 'matan', kpIds: [kp.id], source: '数分(华师大)P87 习题3(2)'
+    });
+    assert.strictEqual(m.stem, '');
+    assert.strictEqual(m.source, '数分(华师大)P87 习题3(2)');
+    assert.strictEqual(m.entryMode, 'full');
+    assert.deepStrictEqual(m.imageIds, []);
+  });
+
+  test('来源超过 60 字会被截断', () => {
+    freshBackend();
+    const kp = S.kpsBySubject('matan')[0];
+    const m = S.addMistake({
+      subject: 'matan', kpIds: [kp.id], source: 'x'.repeat(80)
+    });
+    assert.strictEqual(m.source.length, 60);
+  });
+
+  test('entryMode 只接受 quick / full，其它值回落为 full', () => {
+    freshBackend();
+    const kp = S.kpsBySubject('matan')[0];
+    const a = S.addMistake({ subject: 'matan', kpIds: [kp.id], stem: 'x', entryMode: 'quick' });
+    assert.strictEqual(a.entryMode, 'quick');
+    const b = S.addMistake({ subject: 'matan', kpIds: [kp.id], stem: 'y', entryMode: '乱填' });
+    assert.strictEqual(b.entryMode, 'full');
   });
 
   test('未选知识点时拒绝保存', () => {
@@ -297,6 +332,112 @@ group('迁移 · v1（三科）→ v2（四科）', () => {
     const m = S.addMistake({ subject: 'matan', kpIds: [kp.id], stem: '迁移后新增' });
     assert.ok(m.id);
     assert.strictEqual(S.load().mistakes.length, 5);
+  });
+});
+
+/* ---------------- v2 → v3 迁移（录题效率专项） ---------------- */
+
+group('迁移 · v2 → v3（新增 source / entryMode / imageIds）', () => {
+  /** 构造一份 v2 数据：有完整字段，但缺 v3 的三个新字段。 */
+  function makeV2Db() {
+    return {
+      schemaVersion: 2,
+      createdAt: '2026-10-20T00:00:00Z',
+      kps: [],
+      mistakes: [
+        {
+          id: 'm1', subject: 'matan', kpIds: ['kp_matan_11'],
+          stem: 'v2 时期的题', myAnswer: '错解', correctAnswer: '正解',
+          reason: 'concept',
+          createdAt: '2026-10-20T00:00:00Z', updatedAt: '2026-10-20T00:00:00Z'
+        },
+        {
+          id: 'm2', subject: 'alglinalg', kpIds: ['kp_alglinalg_4'],
+          stem: '另一道 v2 题', myAnswer: '', correctAnswer: '',
+          reason: '',
+          createdAt: '2026-10-21T00:00:00Z', updatedAt: '2026-10-21T00:00:00Z'
+        }
+      ],
+      answers: [
+        { id: 'a1', mistakeId: 'm1', kpIds: ['kp_matan_11'], correct: false, kind: 'intake', at: '2026-10-20T00:00:00Z' }
+      ],
+      events: []
+    };
+  }
+
+  function migrateV2() {
+    return S.normalize(JSON.parse(JSON.stringify(makeV2Db())));
+  }
+
+  test('版本号升到 3', () => {
+    assert.strictEqual(migrateV2().schemaVersion, 3);
+  });
+
+  test('三道新字段全部补齐：source 为空串、entryMode 为 full、imageIds 为 []', () => {
+    const db = migrateV2();
+    db.mistakes.forEach((m) => {
+      assert.strictEqual(m.source, '', m.id + ' 的 source 应为空串');
+      assert.strictEqual(m.entryMode, 'full', m.id + ' 的 entryMode 应为 full');
+      assert.deepStrictEqual(m.imageIds, [], m.id + ' 的 imageIds 应为空数组');
+    });
+  });
+
+  test('旧字段原样不动', () => {
+    const db = migrateV2();
+    const m1 = db.mistakes.filter((m) => m.id === 'm1')[0];
+    assert.strictEqual(m1.stem, 'v2 时期的题');
+    assert.strictEqual(m1.myAnswer, '错解');
+    assert.strictEqual(m1.correctAnswer, '正解');
+    assert.strictEqual(m1.reason, 'concept');
+    assert.deepStrictEqual(m1.kpIds, ['kp_matan_11']);
+  });
+
+  test('迁移幂等：连跑两次结果完全相同', () => {
+    const once = migrateV2();
+    const twice = S.normalize(JSON.parse(JSON.stringify(once)));
+    assert.deepStrictEqual(twice.mistakes, once.mistakes);
+    assert.strictEqual(twice.schemaVersion, once.schemaVersion);
+  });
+
+  test('已带 v3 字段的数据不会被覆盖（迁移只补缺失）', () => {
+    const raw = makeV2Db();
+    raw.mistakes[0].source = '数分 P87';
+    raw.mistakes[0].entryMode = 'quick';
+    raw.mistakes[0].imageIds = ['img_1'];
+    const db = S.normalize(raw);
+    assert.strictEqual(db.mistakes[0].source, '数分 P87');
+    assert.strictEqual(db.mistakes[0].entryMode, 'quick');
+    assert.deepStrictEqual(db.mistakes[0].imageIds, ['img_1']);
+  });
+
+  test('imageIds 里的非字符串脏数据被过滤掉', () => {
+    const raw = makeV2Db();
+    raw.mistakes[0].imageIds = ['ok1', '', null, 123, 'ok2'];
+    const db = S.normalize(raw);
+    assert.deepStrictEqual(db.mistakes[0].imageIds, ['ok1', 'ok2']);
+  });
+
+  test('source 超过 60 字会被截断', () => {
+    const raw = makeV2Db();
+    raw.mistakes[0].source = 'x'.repeat(100);
+    const db = S.normalize(raw);
+    assert.strictEqual(db.mistakes[0].source.length, 60);
+  });
+
+  test('导入 v2 备份（JSON 字符串）仍可用', () => {
+    freshBackend();
+    S.importJson(JSON.stringify(makeV2Db()));
+    const db = S.load();
+    assert.strictEqual(db.schemaVersion, 3);
+    assert.strictEqual(db.mistakes.length, 2);
+    assert.strictEqual(db.mistakes[0].entryMode, 'full');
+  });
+
+  test('v2 数据的作业事件不受迁移影响', () => {
+    const db = migrateV2();
+    assert.strictEqual(db.answers.length, 1);
+    assert.strictEqual(db.answers[0].id, 'a1');
+    assert.strictEqual(db.answers[0].correct, false);
   });
 });
 
