@@ -42,7 +42,7 @@
         '<div class="photo-actions" id="photo-actions">' +
           '<button type="button" class="btn" id="btn-cam" disabled>📷 拍照</button>' +
           '<button type="button" class="btn" id="btn-album" disabled>🖼️ 相册</button>' +
-          '<button type="button" class="btn" id="btn-ocr" hidden>🔍 识别文字</button>' +
+          '<button type="button" class="btn" id="btn-ocr" hidden>识别文字</button>' +
           '<input type="file" id="file-cam" accept="image/*" capture="environment" hidden>' +
           '<input type="file" id="file-album" accept="image/*" multiple hidden>' +
         '</div>' +

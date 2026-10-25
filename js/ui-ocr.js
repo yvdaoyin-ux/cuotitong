@@ -4,7 +4,7 @@
  * 密钥来源（按优先级）：
  *   1. window.QT_OCR_KEY —— 本地打包注入（make-dist.js --ocr-key-file），发单文件用；
  *   2. localStorage qt:ocrKey —— 用户在页面里用口令解锁得到（见下方 C 部分）；
- *   3. 两者都无但存在密文包（window.QT_OCR_VAULT，仓库/线上版）→ 按钮变「🔑 解锁识别」；
+ *   3. 两者都无但存在密文包（window.QT_OCR_VAULT，仓库/线上版）→ 按钮变「解锁识别」；
  *   4. 全都没有 → 按钮整体隐藏（A0 的全局 [hidden] 规则 + 内联双保险），功能等于不存在。
  *
  * A1：识别成功自动展开「详细填写」并把题干滚到可视区——极速模式下识别结果曾落在
@@ -22,8 +22,8 @@
   var util = QT.util;
   var ocr = QT.ocr;
 
-  var BTN_READY = '🔍 识别文字';
-  var BTN_UNLOCK = '🔑 解锁识别';
+  var BTN_READY = '识别文字';
+  var BTN_UNLOCK = '解锁识别';
 
   var busy = false;
   var metrics = { clicks: 0, ok: 0, msTotal: 0, chars: 0 };

@@ -50,36 +50,74 @@
     };
   }
 
-  /** 复习卡：展示前几条到期错题，一键开练。 */
-  function reviewCard(o) {
+  /** 品牌头（U1）：logo 图形 + 名称。 */
+  function brandHead() {
+    return '<header class="home-brand">' +
+      '<svg class="ic home-brand__logo" aria-hidden="true"><use href="#i-logo"/></svg>' +
+      '<div><div class="home-brand__name">错题通</div>' +
+      '<div class="home-brand__sub">错题本 · 薄弱点诊断 · 智能组卷</div></div>' +
+      '</header>';
+  }
+
+  /** 今日复习主角卡（U1）：大数字 + 最多 3 条预览 + 满宽主按钮；无到期时空状态。 */
+  function reviewHero(o) {
     if (!o.mistakeCount) return '';
-
     if (!o.queue.length) {
-      return '<div class="card">' +
+      return '<div class="card home-hero">' +
         '<div class="label">今日复习</div>' +
-        '<p class="muted" style="margin:0">暂时没有到期的题。' +
-        '刚做过的题要过一阵子才会重新出现（故意如此，避免短时重复记忆）。</p>' +
-        '</div>';
+        '<div class="home-hero__row home-hero__row--none">' +
+          '<svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>' +
+          '<div><div class="home-hero__none">没有到期的题</div>' +
+          '<div class="muted" style="font-size:14px">刚做过的题要过一阵子才重新出现（避免短时重复记忆）。</div></div>' +
+        '</div>' +
+        '<button class="btn btn--primary btn--block" data-go="entry">再录一道错题</button>' +
+      '</div>';
     }
-
-    return '<div class="card">' +
-      '<div class="label">今日复习 · ' + o.queue.length + ' 道到期</div>' +
-      o.queue.slice(0, 5).map(function (r, i) {
+    return '<div class="card home-hero">' +
+      '<div class="home-hero__top"><span class="label">今日复习</span></div>' +
+      '<div class="home-hero__stat"><span class="home-hero__num">' + o.queue.length + '</span>' +
+        '<span class="home-hero__due">道到期</span></div>' +
+      o.queue.slice(0, 3).map(function (r, i) {
         var names = r.kpIds.map(function (id) {
           var kp = QT.storage.kpById(id);
           return kp ? kp.name : '未知';
         });
-        return '<div style="padding:8px 0;border-bottom:1px solid var(--line)">' +
-          '<div class="muted" style="font-size:14px">第 ' + (i + 1) + ' 道 · ' +
-            names.map(util.esc).join('、') + '</div>' +
-          '<div style="font-size:14px">' +
-            util.renderRichText(util.truncate(r.mistake.stem, 80)) + '</div>' +
+        return '<div class="home-hero__item">' +
+          '<span class="muted home-hero__idx">' + (i + 1) + '</span>' +
+          '<span class="home-hero__stem">' + util.renderRichText(util.truncate(r.mistake.stem || names.join('、'), 60)) + '</span>' +
         '</div>';
       }).join('') +
-      '<p style="margin:12px 0 0">' +
-        '<button class="btn btn--primary btn--block" id="start-review">' +
-          '▶ 开始复习（' + o.queue.length + ' 道）</button></p>' +
-      '</div>';
+      '<button class="btn btn--primary btn--block" id="start-review">开始复习（' + o.queue.length + ' 道）</button>' +
+    '</div>';
+  }
+
+  /** 三快捷入口（U1）：拍照录题 / 组卷练习 / 薄弱点诊断。 */
+  function quickLinks() {
+    return '<div class="home-quick">' +
+      '<button class="home-quick__item" data-go="entry">' +
+        '<span class="home-quick__icon"><svg class="ic" aria-hidden="true"><use href="#i-camera"/></svg></span>' +
+        '<span>拍照录题</span></button>' +
+      '<button class="home-quick__item" data-go="quiz">' +
+        '<span class="home-quick__icon"><svg class="ic" aria-hidden="true"><use href="#i-target"/></svg></span>' +
+        '<span>组卷练习</span></button>' +
+      '<button class="home-quick__item" data-go="diag">' +
+        '<span class="home-quick__icon"><svg class="ic" aria-hidden="true"><use href="#i-chart"/></svg></span>' +
+        '<span>薄弱点诊断</span></button>' +
+    '</div>';
+  }
+
+  /** 轻统计行（U1）：一行文字，不再用大卡片。 */
+  function statLine(o) {
+    return '<div class="home-stat"><span>错题 ' + o.mistakeCount +
+      ' · 涉及知识点 ' + o.kpCount +
+      ' · 累计作答 ' + o.answerCount + '</span>' +
+      '<button class="home-stat__print" data-go="print">打印练习卷</button></div>';
+  }
+
+  /** 复习卡：展示前几条到期错题，一键开练。 */
+  function reviewCard(o) {
+    if (!o.mistakeCount) return '';
+    return reviewHero(o);
   }
 
   function render() {
@@ -87,16 +125,15 @@
 
     if (o.mistakeCount === 0) {
       return '' +
-        '<h1 class="page-title">错题通</h1>' +
-        '<p class="page-sub">错题本 · 薄弱点诊断 · 智能组卷</p>' +
+        brandHead() +
         '<div class="card">' +
           '<div class="placeholder">' +
             '<div class="placeholder__title">还没有记录过错题</div>' +
             '<div>先记下第一道错题；或者先载入示例数据，看看诊断和组卷长什么样。</div>' +
           '</div>' +
-          '<button class="btn btn--primary btn--block" data-go="entry">✏️ 记录第一道错题</button>' +
+          '<button class="btn btn--primary btn--block" data-go="entry">记录第一道错题</button>' +
           '<p style="margin:10px 0 0">' +
-            '<button class="btn btn--block" id="home-load-sample">📥 先载入示例数据看看（12 道）</button>' +
+            '<button class="btn btn--block" id="home-load-sample">先载入示例数据看看（12 道）</button>' +
           '</p>' +
           '<div class="hint">示例题带「示例」角标，不会被导出；试完可在设置里一键清除。</div>' +
         '</div>' +
@@ -116,7 +153,7 @@
         '<div class="label">最薄弱的 ' + o.weak.length + ' 个知识点</div>' +
         o.weak.map(function (w) {
           var value = w.sufficient
-            ? '<strong>' + Math.round(w.mastery * 100) + '%</strong>' +
+            ? '<strong class="num">' + Math.round(w.mastery * 100) + '%</strong>' +
               '<div class="muted" style="font-size:14px">' +
                 Math.round(w.low * 100) + '%–' + Math.round(w.high * 100) + '%</div>'
             : '<span class="muted">数据不足</span>' +
@@ -130,39 +167,21 @@
             '<div style="text-align:right;white-space:nowrap">' + value + '</div>' +
           '</div>';
         }).join('') +
-        '<p style="margin:10px 0 0"><button class="btn btn--sm" data-go="diag">查看完整诊断 →</button></p>' +
+        '<p style="margin:10px 0 0"><button class="btn btn--sm" data-go="diag">查看完整诊断</button></p>' +
         '</div>';
     }
 
     return '' +
-      '<h1 class="page-title">错题通</h1>' +
-      '<p class="page-sub">错题本 · 薄弱点诊断 · 智能组卷</p>' +
-
-      '<div class="card" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center">' +
-        '<div><div style="font-size:24px;font-weight:700">' + o.mistakeCount + '</div>' +
-          '<div class="muted" style="font-size:14px">错题</div></div>' +
-        '<div><div style="font-size:24px;font-weight:700">' + o.kpCount + '</div>' +
-          '<div class="muted" style="font-size:14px">涉及知识点</div></div>' +
-        '<div><div style="font-size:24px;font-weight:700">' + o.dueCount + '</div>' +
-          '<div class="muted" style="font-size:14px">待复习</div></div>' +
-      '</div>' +
-
-      reviewCard(o) +
-
-      '<div class="card" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
-        '<button class="btn btn--primary" data-go="entry">✏️ 录错题</button>' +
-        '<button class="btn" data-go="quiz">🎯 组卷练习</button>' +
-        '<button class="btn" data-go="print">🖨️ 打印练习卷</button>' +
-        '<button class="btn" data-go="diag">📊 看诊断</button>' +
-      '</div>' +
-
+      brandHead() +
+      reviewHero(o) +
+      quickLinks() +
+      statLine(o) +
       weakHtml +
-
       '<div class="card">' +
         '<div class="label">数据在你自己手里</div>' +
         '<p class="muted" style="margin:0 0 10px">全部数据只存在这台设备的浏览器里，不上传任何服务器。' +
         '换设备前请先在「设置」里导出备份。</p>' +
-        '<button class="btn btn--sm" data-go="settings">⚙️ 设置与备份</button>' +
+        '<button class="btn btn--sm" data-go="settings">设置与备份</button>' +
       '</div>';
   }
 

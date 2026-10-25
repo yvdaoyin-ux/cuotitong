@@ -15,11 +15,11 @@
 
   /** 标签栏定义：5 个主入口。设置页从首页进入。 */
   var TABS = [
-    { key: 'home', label: '主页', icon: '🏠' },
-    { key: 'list', label: '错题本', icon: '📚' },
-    { key: 'entry', label: '录错题', icon: '✏️' },
-    { key: 'diag', label: '诊断', icon: '📊' },
-    { key: 'quiz', label: '组卷', icon: '🎯' }
+    { key: 'home', label: '主页', icon: 'i-home' },
+    { key: 'list', label: '错题本', icon: 'i-book' },
+    { key: 'entry', label: '录错题', icon: 'i-add' },
+    { key: 'diag', label: '诊断', icon: 'i-chart' },
+    { key: 'quiz', label: '组卷', icon: 'i-target' }
   ];
 
   var DEFAULT_KEY = 'home';
@@ -51,8 +51,8 @@
       var on = t.key === activeKey ? ' tabbar__btn--on' : '';
       return '<button class="tabbar__btn' + on + '" data-tab="' + util.esc(t.key) + '"' +
         ' aria-current="' + (t.key === activeKey ? 'page' : 'false') + '">' +
-        '<span class="tabbar__icon">' + t.icon + '</span>' +
-        '<span>' + util.esc(t.label) + '</span></button>';
+        '<span class="tabbar__icon"><svg class="ic" aria-hidden="true"><use href="#' + util.esc(t.icon) + '"/></svg></span>' +
+        '<span class="tabbar__label">' + util.esc(t.label) + '</span></button>';
     }).join('');
   }
 
