@@ -4,7 +4,7 @@
  * 覆盖：
  *   A. buildRequestBody：data URL 强制（纯 base64 必须 throw——2026-10-24 实测 400 的教训编码进代码）
  *   B. parseResponseText：成功包法×2、错误 body、非 2xx、非 JSON、字段缺失
- *   C. 额度护栏：边界 30/30、跨天重置、不可变性
+ *   C. 额度护栏：边界 15/15（2026-10-25 由 30 降为 15）、跨天重置、不可变性
  *   D. friendlyError：code 1000（实测确认）+ 透出未知 code
  *
  * fetch / FileReader / DOM 交互属于浏览器层（ui-ocr.js），Node 里不假装测过，
@@ -160,19 +160,19 @@ group('B. parseResponseText', () => {
 
 /* ================= C. 额度护栏 ================= */
 
-group('C. quotaCheck / quotaRecord（每设备每天 30 次成功）', () => {
-  test('空状态 → 允许，已用 0，剩 30', () => {
-    assert.deepStrictEqual(O.quotaCheck({}, '2026-10-24'), { allowed: true, used: 0, remaining: 30 });
+group('C. quotaCheck / quotaRecord（每设备每天 15 次成功，2026-10-25 由 30 降为 15——旧断言改动见汇报单列）', () => {
+  test('空状态 → 允许，已用 0，剩 15', () => {
+    assert.deepStrictEqual(O.quotaCheck({}, '2026-10-24'), { allowed: true, used: 0, remaining: 15 });
   });
 
-  test('同日已用 29 → 允许（最后 1 次）', () => {
-    const r = O.quotaCheck({ date: '2026-10-24', used: 29 }, '2026-10-24');
+  test('同日已用 14 → 允许（最后 1 次）', () => {
+    const r = O.quotaCheck({ date: '2026-10-24', used: 14 }, '2026-10-24');
     assert.strictEqual(r.allowed, true);
     assert.strictEqual(r.remaining, 1);
   });
 
-  test('同日已用 30 → 拒绝（边界：30 次成功正好封顶）', () => {
-    const r = O.quotaCheck({ date: '2026-10-24', used: 30 }, '2026-10-24');
+  test('同日已用 15 → 拒绝（边界：15 次成功正好封顶）', () => {
+    const r = O.quotaCheck({ date: '2026-10-24', used: 15 }, '2026-10-24');
     assert.strictEqual(r.allowed, false);
     assert.strictEqual(r.remaining, 0);
   });
@@ -205,7 +205,7 @@ group('C. quotaCheck / quotaRecord（每设备每天 30 次成功）', () => {
   test('自定义 limit 生效（30 是默认值）', () => {
     assert.strictEqual(O.quotaCheck({ date: '2026-10-24', used: 5 }, '2026-10-24', 5).allowed, false);
     assert.strictEqual(O.quotaCheck({ date: '2026-10-24', used: 4 }, '2026-10-24', 5).allowed, true);
-    assert.strictEqual(O.DAILY_LIMIT, 30);
+    assert.strictEqual(O.DAILY_LIMIT, 15);
   });
 });
 

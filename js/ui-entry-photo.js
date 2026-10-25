@@ -170,14 +170,16 @@
   }
 
   /**
-   * A3（第四份任务书）：把某张图顺时针旋转 90°。
-   * 新拍图：原地替换 blob（同一 id）；已入库旧图：旧 id 进 removed、
-   * 旋转结果作为新图顶替其位置——与删除旧图一样要点「保存」才真正生效。
+   * A3：把某张图顺时针旋转 90°。编排逻辑在 photo-rotate.js（第五份任务书拆分），
+   * 这里只提供内部状态的最小访问面。
    */
   function rotateOne(id) {
-    var p = findPending(id);
-    if (p) {
-      pipeline.rotateBlob(p.blob, 90).then(function (r) {
+    QT.photoRotate.rotateOne(id, {
+      findPending: findPending,
+      isRemoved: isRemoved,
+      getStore: function () { return store; },
+      pipeline: function () { return pipeline; },
+      replacePending: function (p, r) {
         URL.revokeObjectURL(p.url);
         p.blob = r.blob;
         p.record.blob = r.blob;
@@ -187,16 +189,9 @@
         p.url = trackUrl(r.blob);
         hideErr();
         renderStrip();
-      }).catch(function (e) {
-        showErr('旋转失败：' + (e.message || e));
-      });
-      return;
-    }
-    if (isRemoved(id) || !store || !store.get) return;
-    store.get(id).then(function (rec) {
-      if (!rec || !rec.blob) return;
-      return pipeline.rotateBlob(rec.blob, 90).then(function (r) {
-        removed.push(id);
+      },
+      replaceStored: function (oldId, r) {
+        removed.push(oldId); // 与删除旧图同规则：要点「保存」才真正生效
         var nid = util.uid('img');
         pending.push({
           id: nid,
@@ -205,13 +200,12 @@
           url: trackUrl(r.blob)
         });
         var arr = draft.imageIds;
-        var i = arr.indexOf(id);
+        var i = arr.indexOf(oldId);
         if (i >= 0) arr[i] = nid;
         hideErr();
         renderStrip();
-      });
-    }).catch(function (e) {
-      showErr('旋转失败：' + (e.message || e));
+      },
+      onError: showErr
     });
   }
 

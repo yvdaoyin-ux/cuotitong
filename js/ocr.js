@@ -19,7 +19,7 @@
 
   var ENDPOINT = 'https://open.bigmodel.cn/api/paas/v4/layout_parsing';
   var MODEL = 'glm-ocr';
-  var DAILY_LIMIT = 30;
+  var DAILY_LIMIT = 15; // 2026-10-25 Claude 裁定由 30 降为 15（判据 #4 额度补救，见 docs/识别尝试记录.md）
 
   /* ---------------- 请求 ---------------- */
 
