@@ -1175,3 +1175,70 @@ html, body { background: var(--bg); color: var(--ink); }
   display: inline-flex; align-items: center; justify-content: center; }
 .mcard__act:active { background: var(--brand-weak); color: var(--brand); }
 .mcard .badge--sample { color: var(--warn); border-color: var(--warn); background: var(--warn-weak); }
+
+/* ---------------- U3：诊断页 掌握度排行（纯 HTML/CSS 主图） ---------------- */
+.rank-row { padding: 9px 0 7px; border-bottom: 1px solid var(--line); }
+.rank-row:last-child { border-bottom: none; }
+.rank-row__head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.rank-row__name { font-size: 15px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rank-row__pct { font-size: 15px; font-weight: 700; flex: none; font-variant-numeric: tabular-nums; }
+.rank-row__pct .rank-row__ci { font-size: 12px; font-weight: 400; color: var(--ink-3); }
+.rank-row__pct--na { color: var(--ink-3); font-weight: 400; font-size: 14px; }
+.rank-bar { position: relative; height: 10px; margin: 6px 0 4px;
+  background: var(--surface-2); border-radius: var(--r-pill); overflow: hidden; }
+.rank-bar__ci { position: absolute; top: 0; bottom: 0;
+  background: var(--brand-weak); border-radius: var(--r-pill); }
+.rank-bar__fill { position: absolute; top: 0; bottom: 0; left: 0;
+  border-radius: var(--r-pill); transition: width .18s; }
+.rank-bar__fill--low { background: var(--c4); }
+.rank-bar__fill--mid { background: var(--c2); }
+.rank-bar__fill--high { background: var(--ok); }
+.rank-bar--na {
+  background: repeating-linear-gradient(45deg,
+    var(--surface-2), var(--surface-2) 5px, var(--line) 5px, var(--line) 7px);
+}
+.rank-row__sub { font-size: 12px; color: var(--ink-3); }
+
+.kp-pill { display: inline-block; background: var(--brand-weak); color: var(--brand);
+  border-radius: var(--r-pill); padding: 0 8px; font-weight: 600; }
+
+.card--fold summary { cursor: pointer; font-weight: 600; font-size: 15px;
+  min-height: 40px; display: flex; align-items: center; color: var(--ink-2); }
+.card--fold summary::marker { color: var(--brand); }
+.card--fold[open] summary { margin-bottom: 8px; color: var(--ink); }
+
+/* ---------------- U3：组卷页 ---------------- */
+.rule-card__item { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; }
+.rule-card__icon { width: 34px; height: 34px; border-radius: 50%; flex: none;
+  background: var(--brand-weak); color: var(--brand);
+  display: flex; align-items: center; justify-content: center; }
+.rule-card__icon .ic { width: 18px; height: 18px; }
+.rule-card__text { font-size: 14px; color: var(--ink-2); line-height: 1.55; }
+.rule-card__text b { color: var(--ink); font-weight: 600; }
+
+.quiz-progress { position: sticky; top: 0; z-index: 5;
+  background: var(--bg); padding: 6px 0 8px; }
+.quiz-progress__track { height: 6px; border-radius: var(--r-pill); background: var(--line); overflow: hidden; }
+.quiz-progress__fill { height: 100%; background: var(--brand); border-radius: var(--r-pill);
+  transition: width .18s; }
+.quiz-progress__label { font-size: 12px; color: var(--ink-3); margin-top: 4px;
+  display: flex; justify-content: space-between; font-variant-numeric: tabular-nums; }
+
+.judge-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+.judge-btn { min-height: 64px; border-radius: var(--r-md); font-size: 17px; font-weight: 600;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  border: 1px solid transparent; }
+.judge-btn:active { transform: scale(.98); }
+.judge-btn--ok { background: var(--ok-weak); color: var(--ok); border-color: var(--ok); }
+.judge-btn--no { background: var(--danger-weak); color: var(--danger); border-color: var(--danger); }
+.judge-btn .ic { width: 26px; height: 26px; }
+
+/* ---------------- U3：设置页分组 ---------------- */
+.settings-group { margin-bottom: 14px; }
+.settings-group__title { font-size: 13px; color: var(--ink-3); font-weight: 600;
+  padding: 0 4px 6px; letter-spacing: .5px; }
+.settings-group--danger .settings-group__title { color: var(--danger); }
+
+/* U3：judge-btn 选中态（复用 chip--on 判定逻辑） */
+.judge-btn.chip--on { box-shadow: inset 0 0 0 2px currentColor; opacity: 1; }
+.judge-btn:not(.chip--on) { opacity: .72; }

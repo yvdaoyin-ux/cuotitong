@@ -106,12 +106,11 @@
     '</div>';
   }
 
-  /** 轻统计行（U1）：一行文字，不再用大卡片。 */
+  /** 轻统计行（U1；U3 起打印入口移入组卷页）。 */
   function statLine(o) {
     return '<div class="home-stat"><span>错题 ' + o.mistakeCount +
       ' · 涉及知识点 ' + o.kpCount +
-      ' · 累计作答 ' + o.answerCount + '</span>' +
-      '<button class="home-stat__print" data-go="print">打印练习卷</button></div>';
+      ' · 累计作答 ' + o.answerCount + '</span></div>';
   }
 
   /** 复习卡：展示前几条到期错题，一键开练。 */

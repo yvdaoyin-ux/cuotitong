@@ -81,6 +81,24 @@
         '<p style="margin:12px 0 0"><button class="btn btn--primary btn--block" id="q-draw">' +
           '生成一份练习</button></p>' +
       '</div>' +
+
+      '<div class="card">' +
+        '<div class="label">组卷规则</div>' +
+        '<div class="rule-card__item">' +
+          '<span class="rule-card__icon"><svg class="ic" aria-hidden="true"><use href="#i-target"/></svg></span>' +
+          '<div class="rule-card__text"><b>加权抽题</b>：越临近遗忘、掌握度越低的知识点，被抽中的概率越高。</div>' +
+        '</div>' +
+        '<div class="rule-card__item">' +
+          '<span class="rule-card__icon"><svg class="ic" aria-hidden="true"><use href="#i-sliders"/></svg></span>' +
+          '<div class="rule-card__text"><b>占比上限</b>：同一知识点不超过试卷的四成，保证覆盖面。</div>' +
+        '</div>' +
+        '<div class="rule-card__item">' +
+          '<span class="rule-card__icon"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg></span>' +
+          '<div class="rule-card__text"><b>逐题自评</b>：做完整卷逐题标记对错，系统据此更新掌握度。</div>' +
+        '</div>' +
+        '<p style="margin:10px 0 0"><button class="btn btn--block" data-go="print">' +
+          '<svg class="ic ic--sm" aria-hidden="true"><use href="#i-printer"/></svg> 不做题，直接打印一份练习卷</button></p>' +
+      '</div>' +
       (query.draw === '1' && poolSize === 0
         ? '<div class="card"><div class="empty">这个科目下还没有错题。</div>' +
           '<button class="btn btn--sm btn--block" data-go="entry">去录题</button></div>'
@@ -104,10 +122,16 @@
     return '' +
       '<h1 class="page-title">' + (isReview ? '今日复习' : '练习中') + '</h1>' +
       '<p class="page-sub">共 ' + problems.length + ' 题 · 做完后逐题自评对错</p>' +
+
+      '<div class="quiz-progress" id="quiz-progress">' +
+        '<div class="quiz-progress__track"><div class="quiz-progress__fill" id="quiz-progress-fill" style="width:0%"></div></div>' +
+        '<div class="quiz-progress__label"><span>已自评 <b id="quiz-progress-n">0</b> / ' + problems.length + ' 题</span>' +
+          '<span>自评完再交卷</span></div>' +
+      '</div>' +
       // 放宽提示：单知识点占比可能超过 40%，必须明确告知，否则用户会以为承诺失效
       (Number(query.relax) > 0
-        ? '<div class="card" style="background:#fff7e6;border:1px solid #f0d9a8">' +
-            '<div style="font-size:14px;line-height:1.6">' +
+        ? '<div class="card" style="background:var(--warn-weak);border:1px solid var(--warn)">' +
+            '<div style="font-size:14px;line-height:1.6;color:var(--warn)">' +
               '因错题覆盖的知识点较少，已放宽单一知识点的占比上限' +
               '（本题库不足以在 40% 限制内凑满 ' + problems.length + ' 道）。' +
             '</div></div>'
@@ -138,9 +162,11 @@
                 'style="min-height:64px" data-answer placeholder="写下你的解法或答案"></textarea>' +
             '</div>' +
             '<div class="label">自评</div>' +
-            '<div class="chips" data-judge>' +
-              '<button type="button" class="chip" data-correct="1">做对了</button>' +
-              '<button type="button" class="chip" data-correct="0">做错了</button>' +
+            '<div class="judge-row" data-judge>' +
+              '<button type="button" class="judge-btn judge-btn--ok" data-correct="1">' +
+                '<svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>做对了</button>' +
+              '<button type="button" class="judge-btn judge-btn--no" data-correct="0">' +
+                '<svg class="ic" aria-hidden="true"><use href="#i-close"/></svg>做错了</button>' +
             '</div>' +
             '<div class="hint" data-reveal hidden>' +
               '<strong>我的原答案：</strong>' + (m.myAnswer
@@ -295,6 +321,16 @@
           btn.classList.add('chip--on');
           btn.setAttribute('aria-pressed', 'true');
         }
+        // U3 进度条：已自评题数 / 总题数
+        var all = el.querySelectorAll('[data-qid]');
+        var done = 0;
+        for (var j = 0; j < all.length; j++) {
+          if (all[j].querySelector('[data-correct].chip--on')) done += 1;
+        }
+        var fill = el.querySelector('#quiz-progress-fill');
+        var num = el.querySelector('#quiz-progress-n');
+        if (fill) fill.style.width = (all.length ? Math.round(done / all.length * 100) : 0) + '%';
+        if (num) num.textContent = String(done);
       });
 
       form.addEventListener('submit', function (ev) {

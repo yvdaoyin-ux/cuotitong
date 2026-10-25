@@ -125,24 +125,93 @@
         Math.round(st.low * 100) + '–' + Math.round(st.high * 100) + '%</span>';
   }
 
+  /** 掌握度分档色（低/中/高三档；文字同时写数值，不只靠颜色）。 */
+  function masteryTone(m) {
+    if (m < 0.4) return 'low';
+    if (m < 0.7) return 'mid';
+    return 'high';
+  }
+
+  /** U3 主图：掌握度排行（纯 HTML/CSS 条形 + 95% 区间浅色范围，不用 ECharts）。 */
+  function rankHtml(rows) {
+    return rows.map(function (r) {
+      var st = r.state;
+      var tr = topReason(r.wrongByReason);
+      if (!st.sufficient) {
+        return '<div class="rank-row rank-row--na">' +
+          '<div class="rank-row__head"><span class="rank-row__name">' + util.esc(r.name) + '</span>' +
+          '<span class="rank-row__pct rank-row__pct--na">数据不足</span></div>' +
+          '<div class="rank-bar rank-bar--na" title="样本 ' + st.n + '/' + QT.stats.CONFIG.minSamples + '"></div>' +
+          '<div class="rank-row__sub">样本 ' + st.n + '/' + QT.stats.CONFIG.minSamples +
+            ' · 错' + st.wrong + '/对' + st.correct + '</div>' +
+        '</div>';
+      }
+      var lo = Math.max(0, Math.round(st.low * 100));
+      var hi = Math.min(100, Math.round(st.high * 100));
+      var mid = Math.round(st.mastery * 100);
+      return '<div class="rank-row">' +
+        '<div class="rank-row__head"><span class="rank-row__name">' + util.esc(r.name) + '</span>' +
+          '<span class="rank-row__pct">' + mid + '%' +
+          '<span class="rank-row__ci">(' + lo + '–' + hi + '%)</span></span></div>' +
+        '<div class="rank-bar">' +
+          '<div class="rank-bar__ci" style="left:' + lo + '%;width:' + Math.max(2, hi - lo) + '%"></div>' +
+          '<div class="rank-bar__fill rank-bar__fill--' + masteryTone(st.mastery) + '" style="width:' + mid + '%"></div>' +
+        '</div>' +
+        '<div class="rank-row__sub">' + util.esc(QT.data.subjectName(r.subject)) +
+          (tr ? ' · 主要错因：' + util.esc(tr.name) : '') +
+          ' · 错' + st.wrong + '/对' + st.correct + '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  /** 结论卡：把【知识点】渲染成药丸高亮。 */
+  function narrativeHtml(rows) {
+    return util.esc(narrative(rows))
+      .replace(/【([^】]+)】/g, '<span class="kp-pill">$1</span>');
+  }
+
   /* ---------------- 图表 ---------------- */
 
-  /** 雷达图：取样本足够、掌握度最低的 6 个知识点（雷达维度不宜过多）。 */
+  /** ECharts 统一主题（U3）：字体、分类色 --c1..c5、淡化坐标线。 */
+  function registerQtTheme() {
+    if (!global.echarts || global.echarts.getMap) return;
+    try {
+      global.echarts.registerTheme('qt', {
+        color: ['#3A47B8', '#D9822B', '#2A9D8F', '#C2456B', '#7B8798'],
+        textStyle: { fontFamily: '-apple-system, "PingFang SC", "Microsoft YaHei", sans-serif' },
+        categoryAxis: {
+          axisLine: { lineStyle: { color: '#D5D1C7' } },
+          axisTick: { show: false },
+          axisLabel: { color: '#556070' },
+          splitLine: { lineStyle: { color: '#F0EEE8' } }
+        },
+        valueAxis: {
+          axisLine: { show: false },
+          axisLabel: { color: '#6F7A8A' },
+          splitLine: { lineStyle: { color: '#F0EEE8' } }
+        }
+      });
+    } catch (e) { /* 主题失败不阻塞图表 */ }
+  }
+
+  /** 雷达图（U3 降级为可折叠次要图）：标签 5 字截断、半径 56% 修裁切。 */
   function renderRadar(el, rows) {
-    var usable = rows.filter(function (r) { return r.state.sufficient; }).slice(0, 6);
+    var usable = rows.filter(function (r) { return r.state.sufficient; }).slice(0, 8);
     if (usable.length < 3) {
       el.innerHTML = '<div class="hint">至少需要 3 个知识点各有 ' +
         QT.stats.CONFIG.minSamples + ' 次以上作答才能画雷达图。</div>';
       return;
     }
-    var chart = global.echarts.init(el, null, { renderer: 'canvas' });
+    var chart = global.echarts.init(el, 'qt', { renderer: 'canvas' });
     chart.setOption({
       tooltip: {},
       radar: {
         indicator: usable.map(function (r) {
-          return { name: util.truncate(r.name, 6), max: 100 };
+          return { name: util.truncate(r.name, 5), max: 100 };
         }),
-        radius: '62%',
+        radius: '56%',
+        center: ['50%', '54%'],
+        axisName: { color: '#556070', fontSize: 11 },
         triggerEvent: false
       },
       series: [{
@@ -150,7 +219,7 @@
         data: [{
           value: usable.map(function (r) { return Math.round(r.state.mastery * 100); }),
           name: '掌握度（%）',
-          areaStyle: { opacity: 0.25 }
+          areaStyle: { opacity: 0.22 }
         }]
       }]
     });
@@ -171,13 +240,13 @@
       el.innerHTML = '<div class="hint">还没有标注错因的错题。</div>';
       return;
     }
-    var chart = global.echarts.init(el, null, { renderer: 'canvas' });
+    var chart = global.echarts.init(el, 'qt', { renderer: 'canvas' });
     chart.setOption({
       tooltip: { trigger: 'item' },
       series: [{
         type: 'pie',
         radius: ['42%', '68%'],
-        label: { formatter: '{b}\n{c} 道', fontSize: 12 },
+        label: { formatter: '{b}\n{c} 道', fontSize: 12, color: '#556070' },
         data: data
       }]
     });
@@ -196,13 +265,12 @@
     });
     var subjects = QT.data.SUBJECTS.filter(function (s) { return agg[s.id]; });
     if (!subjects.length) { el.innerHTML = ''; return; }
-    var chart = global.echarts.init(el, null, { renderer: 'canvas' });
+    var chart = global.echarts.init(el, 'qt', { renderer: 'canvas' });
     chart.setOption({
       grid: { left: 8, right: 16, top: 24, bottom: 8, containLabel: true },
       xAxis: {
         type: 'value', max: 100,
-        axisLabel: { formatter: '{value}%' },
-        splitLine: { lineStyle: { color: '#f0f0f0' } }
+        axisLabel: { formatter: '{value}%' }
       },
       yAxis: {
         type: 'category',
@@ -216,7 +284,7 @@
         data: subjects.map(function (s) {
           return Math.round((agg[s.id].sum / agg[s.id].n) * 100);
         }),
-        itemStyle: { color: '#2f6feb', borderRadius: [0, 4, 4, 0] }
+        itemStyle: { color: '#3A47B8', borderRadius: [0, 4, 4, 0] }
       }]
     });
     return chart;
@@ -254,35 +322,18 @@
       return head + '<div class="card"><div class="empty">这个科目下还没有数据。</div></div>';
     }
 
-    var tableHtml = '<div class="card">' +
-      '<div class="label">各知识点掌握度</div>' +
-      rows.map(function (r) {
-        var tr = topReason(r.wrongByReason);
-        return '<div style="display:flex;justify-content:space-between;align-items:center;' +
-            'gap:8px;padding:9px 0;border-bottom:1px solid var(--line)">' +
-          '<div style="min-width:0">' +
-            '<div>' + util.esc(r.name) + '</div>' +
-            '<div class="muted" style="font-size:14px">' +
-              util.esc(QT.data.subjectName(r.subject)) +
-              (tr ? ' · 主要错因：' + util.esc(tr.name) : '') +
-              ' · 错' + r.state.wrong + '/对' + r.state.correct +
-            '</div>' +
-          '</div>' +
-          '<div style="text-align:right;white-space:nowrap">' + masteryCell(r) + '</div>' +
-        '</div>';
-      }).join('') +
+    var rankCard = '<div class="card">' +
+      '<div class="label">掌握度排行<span class="label__aside">条形为掌握度，浅色带为 95% 可信区间</span></div>' +
+      rankHtml(rows) +
       '</div>';
 
     return head +
       '<div class="card">' +
         '<div class="label">诊断结论</div>' +
-        '<p style="margin:0">' + util.esc(narrative(rows)) + '</p>' +
+        '<p style="margin:0">' + narrativeHtml(rows) + '</p>' +
       '</div>' +
 
-      '<div class="card">' +
-        '<div class="label">掌握度雷达图</div>' +
-        '<div id="ch-radar" style="width:100%;height:280px"></div>' +
-      '</div>' +
+      rankCard +
 
       '<div class="card">' +
         '<div class="label">错因分布</div>' +
@@ -295,7 +346,10 @@
           Math.max(120, QT.data.SUBJECTS.length * 46) + 'px"></div>' +
       '</div>' +
 
-      tableHtml;
+      '<details class="card card--fold">' +
+        '<summary class="card__fold-head">雷达图（辅助视图）</summary>' +
+        '<div id="ch-radar" style="width:100%;height:280px"></div>' +
+      '</details>';
   }
 
   function after(el, query) {
@@ -315,22 +369,23 @@
 
     ensureECharts(function (ok) {
       if (!ok) {
-        // 降级：图表区换成提示，表格照常可读
+        // 降级：图表区换成提示，排行主图（纯 HTML）不受影响
         ['ch-radar', 'ch-reason', 'ch-subject'].forEach(function (id) {
           var box = document.getElementById(id);
-          if (box) box.innerHTML = '<div class="hint">图表库未加载（离线包里缺少 lib/echarts.min.js），下方表格数据仍然可用。</div>';
+          if (box) box.innerHTML = '<div class="hint">图表库未加载（离线包里缺少 lib/echarts.min.js），掌握度排行不受影响。</div>';
         });
         return;
       }
+      registerQtTheme();
       var radar = document.getElementById('ch-radar');
       var reason = document.getElementById('ch-reason');
       var subj = document.getElementById('ch-subject');
-      if (radar) { var c1 = renderRadar(radar, rows); if (c1) charts.push(c1); }
       if (reason) { var c2 = renderReasons(reason, db); if (c2) charts.push(c2); }
       if (subj) {
         var states = QT.stats.computeStates(db.mistakes, db.answers, util.nowIso());
         var c3 = renderBySubject(subj, db, states); if (c3) charts.push(c3);
       }
+      if (radar) { var c1 = renderRadar(radar, rows); if (c1) charts.push(c1); }
     });
   }
 

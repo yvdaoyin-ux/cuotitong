@@ -16,6 +16,9 @@
     return '' +
       '<h1 class="page-title">设置</h1>' +
 
+      '<div class="settings-group">' +
+      '<div class="settings-group__title">数据</div>' +
+
       '<div class="card">' +
         '<div class="label">数据概况</div>' +
         '<p class="muted" style="margin:0">' +
@@ -47,8 +50,11 @@
         '<div class="hint">恢复会**整体替换**当前数据，不是合并。含图片的备份会自动识别。</div>' +
       '</div>' +
 
+      '<div class="settings-group">' +
+      '<div class="settings-group__title">使用数据（帮我们改进）</div>' +
+
       '<div class="card">' +
-        '<div class="label">导出使用数据（帮我们改进）</div>' +
+        '<div class="label">导出使用数据</div>' +
         '<p class="muted" style="margin:0 0 8px">如果你愿意，可以导出一份**匿名**使用数据发给开发者。' +
           '它只包含计数与时间，用于写统计报告。</p>' +
         '<div style="background:var(--brand-weak);border-radius:10px;padding:10px 12px;margin-bottom:10px">' +
@@ -68,11 +74,10 @@
           '不发也完全不影响使用。</div>' +
       '</div>' +
 
-      '<div class="card">' +
-        '<div class="label">危险操作</div>' +
-        '<button class="btn btn--danger btn--block" id="btn-reset">清空全部数据</button>' +
-        '<div class="hint">清空后无法恢复，除非你导出过备份。</div>' +
       '</div>' +
+
+      '<div class="settings-group">' +
+      '<div class="settings-group__title">示例数据</div>' +
 
       '<div class="card">' +
         '<div class="label">演示数据</div>' +
@@ -88,6 +93,21 @@
         '</div>' +
         '<div class="hint">「清除」只删带示例标记的题，你自己录的一道都不会动。</div>' +
       '</div>' +
+
+      '</div>' +
+
+      '<div class="settings-group settings-group--danger">' +
+      '<div class="settings-group__title">危险操作</div>' +
+
+      '<div class="card">' +
+        '<button class="btn btn--danger btn--block" id="btn-reset">清空全部数据</button>' +
+        '<div class="hint">清空后无法恢复，除非你导出过备份。</div>' +
+      '</div>' +
+
+      '</div>' +
+
+      '<div class="settings-group">' +
+      '<div class="settings-group__title">反馈与关于</div>' +
 
       '<div class="card">' +
         '<div class="label">反馈</div>' +
