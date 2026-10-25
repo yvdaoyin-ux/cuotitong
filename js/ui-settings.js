@@ -28,7 +28,7 @@
         '<div class="label">图片存储</div>' +
         '<p class="muted" style="margin:0" id="img-usage">统计中…</p>' +
         '<p class="muted" id="img-warn" hidden style="color:var(--danger);margin:6px 0 0">' +
-          '⚠️ 浏览器数据占用已超过 100MB，建议删掉不需要的错题（会连带删图）。</p>' +
+          '浏览器数据占用已超过 100MB，建议删掉不需要的错题（会连带删图）。</p>' +
       '</div>' +
 
       '<div class="card">' +
@@ -36,12 +36,12 @@
         '<p class="muted" style="margin:0 0 10px">数据只存在本机浏览器里。' +
           '清理浏览器数据、换手机都会丢，建议每周导出一次。</p>' +
         '<div style="display:grid;gap:8px">' +
-          '<button class="btn btn--primary btn--block" id="btn-export">⬇️ 导出备份（JSON）</button>' +
+          '<button class="btn btn--primary btn--block" id="btn-export">导出备份（JSON）</button>' +
           '<label class="print-opt" style="display:flex;gap:8px;align-items:center">' +
             '<input type="checkbox" id="exp-imgs">' +
             '<span style="font-size:14px">连同图片一起备份（体积大、生成慢，默认不含图片）</span>' +
           '</label>' +
-          '<button class="btn btn--block" id="btn-import">⬆️ 从备份恢复</button>' +
+          '<button class="btn btn--block" id="btn-import">从备份恢复</button>' +
           '<input type="file" id="file-import" accept=".json,application/json" hidden>' +
         '</div>' +
         '<div class="hint">恢复会**整体替换**当前数据，不是合并。含图片的备份会自动识别。</div>' +
@@ -61,8 +61,8 @@
           '</div>' +
         '</div>' +
         '<div style="display:grid;gap:8px">' +
-          '<button class="btn btn--block" id="btn-usage-json">📄 导出使用数据（JSON）</button>' +
-          '<button class="btn btn--block" id="btn-usage-csv">📊 导出事件表（CSV，可用 Excel 打开）</button>' +
+          '<button class="btn btn--block" id="btn-usage-json">导出使用数据（JSON）</button>' +
+          '<button class="btn btn--block" id="btn-usage-csv">导出事件表（CSV，可用 Excel 打开）</button>' +
         '</div>' +
         '<div class="hint">导出前你可以在手机/电脑上直接打开文件核对一遍，确认无误再发送。' +
           '不发也完全不影响使用。</div>' +
@@ -81,9 +81,9 @@
           '<strong>会参与诊断与组卷（这样才能演示效果），但绝不会被导出</strong>。' +
           '试完点「清除」即可，你自己的题不受影响。</p>' +
         '<div style="display:grid;gap:8px">' +
-          '<button class="btn btn--block" id="btn-sample-load">📥 载入示例数据</button>' +
+          '<button class="btn btn--block" id="btn-sample-load">载入示例数据</button>' +
           '<button class="btn btn--block" id="btn-sample-clear"' +
-            (sampleCount ? '' : ' disabled') + '>🧹 清除示例数据' +
+            (sampleCount ? '' : ' disabled') + '>清除示例数据' +
             (sampleCount ? '（' + sampleCount + ' 道）' : '（当前没有）') + '</button>' +
         '</div>' +
         '<div class="hint">「清除」只删带示例标记的题，你自己录的一道都不会动。</div>' +
@@ -94,7 +94,7 @@
         (QT.config && QT.config.FEEDBACK_URL
           ? '<p class="muted" style="margin:0 0 10px">用了一周后，欢迎告诉我哪里难用。</p>' +
             '<a class="btn btn--primary btn--block" href="' + util.esc(QT.config.FEEDBACK_URL) +
-              '" target="_blank" rel="noopener">📝 填写反馈问卷</a>'
+              '" target="_blank" rel="noopener">填写反馈问卷</a>'
           : '<p class="muted" style="margin:0">反馈问卷链接待补充。' +
             '有意见可以直接告诉发链接给你的同学。</p>') +
       '</div>' +

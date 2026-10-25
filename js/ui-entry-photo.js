@@ -38,10 +38,19 @@
   function html(d) {
     return '' +
       '<div class="card" id="photo-card">' +
-        '<div class="label">题目图片（可选，最多 ' + pipeline.MAX_PER_MISTAKE + ' 张）</div>' +
+        '<div class="label"><span class="step-badge">1</span>题目' +
+          '<span class="label__aside">最多 ' + pipeline.MAX_PER_MISTAKE + ' 张</span></div>' +
         '<div class="photo-actions" id="photo-actions">' +
-          '<button type="button" class="btn" id="btn-cam" disabled>📷 拍照</button>' +
-          '<button type="button" class="btn" id="btn-album" disabled>🖼️ 相册</button>' +
+          '<button type="button" class="photo-tile" id="btn-cam" disabled>' +
+            '<span class="photo-tile__icon"><svg class="ic" aria-hidden="true"><use href="#i-camera"/></svg></span>' +
+            '<span class="photo-tile__name">拍照</span>' +
+            '<span class="photo-tile__hint">拍这道题</span>' +
+          '</button>' +
+          '<button type="button" class="photo-tile" id="btn-album" disabled>' +
+            '<span class="photo-tile__icon"><svg class="ic" aria-hidden="true"><use href="#i-image"/></svg></span>' +
+            '<span class="photo-tile__name">相册</span>' +
+            '<span class="photo-tile__hint">从相册选</span>' +
+          '</button>' +
           '<button type="button" class="btn" id="btn-ocr" hidden>识别文字</button>' +
           '<input type="file" id="file-cam" accept="image/*" capture="environment" hidden>' +
           '<input type="file" id="file-album" accept="image/*" multiple hidden>' +
@@ -94,7 +103,7 @@
         (url ? '<img alt="题目图片" src="' + url + '">' : '<span class="imgthumb__loading">…</span>') +
       '</button>' +
       '<button type="button" class="imgthumb-del" data-edel="' + util.esc(id) + '" ' +
-        'aria-label="删除这张图片">✕</button>' +
+        'aria-label="删除这张图片"><svg class="ic ic--sm" aria-hidden="true"><use href="#i-close"/></svg></button>' +
     '</div>';
   }
 
@@ -365,9 +374,9 @@
       if (!url) return;
       var actions = [{ label: '↻ 旋转 90°', fn: function () { rotateOne(id); } }];
       if (isPending) {
-        actions.push({ label: '📷 重拍这张', fn: function () { retake(id); } });
+        actions.push({ label: '重拍这张', fn: function () { retake(id); } });
       }
-      actions.push({ label: '🗑 删除这张', fn: function () { removeOne(id); } });
+      actions.push({ label: '删除这张', fn: function () { removeOne(id); } });
       QT.imageView.open({ urls: [url], actions: actions });
     });
 

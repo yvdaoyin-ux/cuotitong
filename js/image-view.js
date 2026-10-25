@@ -98,12 +98,12 @@
     viewerEl.className = 'imgview';
     viewerEl.hidden = true;
     viewerEl.innerHTML =
-      '<button type="button" class="imgview__close" aria-label="关闭">✕</button>' +
+      '<button type="button" class="imgview__close" aria-label="关闭"><svg class="ic" aria-hidden="true"><use href="#i-close"/></svg></button>' +
       '<div class="imgview__stage"><img class="imgview__img" alt="题目图片大图"></div>' +
       '<div class="imgview__bar"></div>';
     document.body.appendChild(viewerEl);
 
-    // ✕ 与遮罩空白处点击关闭（点图片本体不关，方便缩放操作）
+    // 关闭按钮与遮罩空白处点击关闭（点图片本体不关，方便缩放操作）
     viewerEl.querySelector('.imgview__close').addEventListener('click', closeViewer);
     viewerEl.addEventListener('click', function (ev) {
       if (ev.target === viewerEl || ev.target.classList.contains('imgview__stage')) closeViewer();

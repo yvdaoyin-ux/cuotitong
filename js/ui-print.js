@@ -118,8 +118,8 @@
           '<span>附答案与解析（会另起一页）</span>' +
         '</label>' +
         '<div style="display:grid;gap:8px;margin-top:12px">' +
-          '<button class="btn btn--primary btn--block" id="p-print">🖨️ 打印 / 存为 PDF</button>' +
-          '<button class="btn btn--block" id="p-regen">🔄 重新抽题</button>' +
+          '<button class="btn btn--primary btn--block" id="p-print">打印 / 存为 PDF</button>' +
+          '<button class="btn btn--block" id="p-regen">重新抽题</button>' +
         '</div>' +
         '<div class="hint">该科目下现有 ' +
           db.mistakes.filter(function (m) { return m.subject === subject; }).length +
@@ -128,7 +128,7 @@
 
     if (!db.mistakes.length) {
       return head + '<div class="card"><div class="empty">还没有错题，无法生成练习卷。</div>' +
-        '<button class="btn btn--sm btn--block" data-go="entry">✏️ 去录题</button></div>';
+        '<button class="btn btn--sm btn--block" data-go="entry">去录题</button></div>';
     }
     if (!problems.length) {
       return head + '<div class="card"><div class="empty">这个科目下还没有错题。</div></div>';

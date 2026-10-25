@@ -127,7 +127,7 @@
     renderTabs();
     renderGroup();
 
-    // 🔴 pointerdown + preventDefault：阻止焦点转移，输入法键盘不收起（任务书 2.2）
+    // 注意：pointerdown + preventDefault：阻止焦点转移，输入法键盘不收起（任务书 2.2）
     // 所有动作都在 pointerdown 里做，click 一律忽略
     toolbarEl.addEventListener('pointerdown', function (ev) {
       ev.preventDefault();
@@ -278,7 +278,7 @@
       // 底部 padding 同步抬高（工具栏 bottom + 自身高度），
       // 保证焦点元素始终能滚到工具栏上方
       applyBodyPadding();
-      // 🔴 这里只调 padding 不做滚动校正：用户聚焦后有权自由滚动查看别处，
+      // 注意：这里只调 padding 不做滚动校正：用户聚焦后有权自由滚动查看别处，
       //    跟着滚事件校正会强行把页面拉回输入框（v1.2 实测踩到）。
       //    校正只在「聚焦瞬间」（show）和「键盘尺寸变化」（resize→onResize）做。
     };

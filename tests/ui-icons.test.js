@@ -46,10 +46,9 @@ console.log('\nU1. 已换装文件无表情符号');
 // 只扫「界面文件」：app.js + ui-*.js + image-view.js（渲染 DOM 模板的）。
 // 逻辑层文件（stats/storage/util/symbols 等）注释里的 ⚠ 🔴 标记不是界面元素，不在此测。
 // U2/U3 未换装的 UI 文件临时白名单（逐关口移除；移空后此表为空数组）。
+// U2 后仅剩 U3 待换装文件（诊断/组卷/设置/打印）；U3 完成后此表清空。
 const EMOJI_WHITELIST = new Set([
-  'ui-list.js', 'ui-entry.js', 'ui-entry-photo.js', 'ui-toolbar.js',
   'ui-diag.js', 'ui-quiz.js', 'ui-settings.js', 'ui-print.js',
-  'image-view.js',
 ]);
 const EMOJI_RE = /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}]/u;
 

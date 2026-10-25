@@ -79,11 +79,11 @@
         '</div>' +
         '<p class="hint">该科目下现有 ' + poolSize + ' 道错题；实际抽出数量不会超过它。</p>' +
         '<p style="margin:12px 0 0"><button class="btn btn--primary btn--block" id="q-draw">' +
-          '🎲 生成一份练习</button></p>' +
+          '生成一份练习</button></p>' +
       '</div>' +
       (query.draw === '1' && poolSize === 0
         ? '<div class="card"><div class="empty">这个科目下还没有错题。</div>' +
-          '<button class="btn btn--sm btn--block" data-go="entry">✏️ 去录题</button></div>'
+          '<button class="btn btn--sm btn--block" data-go="entry">去录题</button></div>'
         : '');
   }
 
@@ -108,7 +108,7 @@
       (Number(query.relax) > 0
         ? '<div class="card" style="background:#fff7e6;border:1px solid #f0d9a8">' +
             '<div style="font-size:14px;line-height:1.6">' +
-              '⚠️ 因错题覆盖的知识点较少，已放宽单一知识点的占比上限' +
+              '因错题覆盖的知识点较少，已放宽单一知识点的占比上限' +
               '（本题库不足以在 40% 限制内凑满 ' + problems.length + ' 道）。' +
             '</div></div>'
         : '') +
@@ -120,7 +120,7 @@
           var stemHtml = m.stem
             ? util.renderRichText(m.stem)
             : (m.source
-              ? '<div class="stem-source">📄 ' + util.esc(m.source) + '<span class="muted">（题干见图片/原文）</span></div>'
+              ? '<div class="stem-source">' + util.esc(m.source) + '<span class="muted">（题干见图片/原文）</span></div>'
               : '<div class="muted">（本题没有题干文字）</div>');
           var imgsHtml = (m.imageIds && m.imageIds.length)
             ? '<div class="imgstrip" data-img-ids="' + util.esc(m.imageIds.join(',')) + '"></div>'
@@ -139,8 +139,8 @@
             '</div>' +
             '<div class="label">自评</div>' +
             '<div class="chips" data-judge>' +
-              '<button type="button" class="chip" data-correct="1">✓ 做对了</button>' +
-              '<button type="button" class="chip" data-correct="0">✗ 做错了</button>' +
+              '<button type="button" class="chip" data-correct="1">做对了</button>' +
+              '<button type="button" class="chip" data-correct="0">做错了</button>' +
             '</div>' +
             '<div class="hint" data-reveal hidden>' +
               '<strong>我的原答案：</strong>' + (m.myAnswer
@@ -218,7 +218,7 @@
 
       '<div class="card" style="display:grid;gap:8px">' +
         '<button class="btn btn--primary btn--block" data-go="quiz">再组一份</button>' +
-        '<button class="btn btn--block" id="to-print">🖨️ 把这份卷子打印出来</button>' +
+        '<button class="btn btn--block" id="to-print">把这份卷子打印出来</button>' +
         '<button class="btn btn--block" data-go="home">回主页</button>' +
       '</div>';
   }

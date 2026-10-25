@@ -248,7 +248,7 @@
 
     if (!db.mistakes.length) {
       return head + '<div class="card"><div class="empty">还没有错题，暂无诊断。' +
-        '</div><button class="btn btn--primary btn--block" data-go="entry">✏️ 去录题</button></div>';
+        '</div><button class="btn btn--primary btn--block" data-go="entry">去录题</button></div>';
     }
     if (!rows.length) {
       return head + '<div class="card"><div class="empty">这个科目下还没有数据。</div></div>';

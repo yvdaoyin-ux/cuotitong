@@ -48,6 +48,12 @@
     });
   }
 
+  /** 错因 → 色点 class（REASONS 顺序对 --c1..--c5，不只靠颜色：文字始终在） */
+  function reasonDotClass(reasonId) {
+    var idx = QT.data.REASONS.findIndex(function (r) { return r.id === reasonId; });
+    return 'mcard__dot--c' + (idx >= 0 ? idx + 1 : 5);
+  }
+
   function cardHtml(m) {
     var names = kpNames(m.kpIds);
     return '' +
@@ -55,12 +61,14 @@
         '<div class="mcard__head">' +
           // 示例题必须显式标出来，否则用户会以为是自己录的
           (m.isSample ? '<span class="badge badge--sample">示例</span>' : '') +
-          '<span class="badge">' + util.esc(QT.data.subjectName(m.subject)) + '</span>' +
+          '<span class="badge mcard__subject-badge">' + util.esc(QT.data.subjectName(m.subject)) + '</span>' +
           names.slice(0, 2).map(function (n) {
-            return '<span class="badge">' + util.esc(n) + '</span>';
+            return '<span class="mcard__kp">' + util.esc(n) + '</span>';
           }).join('') +
-          (names.length > 2 ? '<span class="badge">+' + (names.length - 2) + '</span>' : '') +
-          (m.reason ? '<span class="badge badge--reason">' + util.esc(QT.data.reasonName(m.reason)) + '</span>' : '') +
+          (names.length > 2 ? '<span class="mcard__kp">+' + (names.length - 2) + '</span>' : '') +
+          (m.reason ? '<span class="badge badge--reason" title="错因">' +
+            '<span class="mcard__dot ' + reasonDotClass(m.reason) + '"></span>' +
+            util.esc(QT.data.reasonName(m.reason)) + '</span>' : '') +
         '</div>' +
         '<div class="mcard__text">' + util.renderRichText(util.truncate(m.stem, 160)) + '</div>' +
         // 阶段 3：带图的题先显示首图缩略图（异步注水，见 image-view.js hydrate）
@@ -70,9 +78,10 @@
         '<div class="mcard__meta">' +
           '<span>' + util.esc(util.fmtDate(m.createdAt)) + '</span>' +
           '<span class="mcard__acts">' +
-            '<button class="btn btn--sm" data-edit="' + util.esc(m.id) + '">编辑</button>' +
-            '<button class="btn btn--sm" data-copy="' + util.esc(m.id) + '" ' +
-              'aria-label="复制为新题">复制</button>' +
+            '<button class="mcard__act" data-edit="' + util.esc(m.id) + '" aria-label="编辑这道题">' +
+              '<svg class="ic" aria-hidden="true"><use href="#i-edit"/></svg></button>' +
+            '<button class="mcard__act" data-copy="' + util.esc(m.id) + '" aria-label="复制为新题">' +
+              '<svg class="ic" aria-hidden="true"><use href="#i-copy"/></svg></button>' +
           '</span>' +
         '</div>' +
       '</div>';
@@ -113,7 +122,7 @@
         '<div class="card"><div class="empty">' +
           (total === 0 ? '还没有错题。' : '没有符合筛选条件的错题。') +
           '</div>' +
-          (total === 0 ? '<button class="btn btn--primary btn--block" data-go="entry">✏️ 记录第一道错题</button>' : '') +
+          (total === 0 ? '<button class="btn btn--primary btn--block" data-go="entry">记录第一道错题</button>' : '') +
         '</div>';
     }
 

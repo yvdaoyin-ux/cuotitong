@@ -115,7 +115,9 @@
     return list.map(function (k) {
       var on = selected.indexOf(k.id) >= 0 ? ' chip--on' : '';
       return '<button type="button" class="chip' + on + '" data-kp="' + util.esc(k.id) + '"' +
-        ' aria-pressed="' + (on ? 'true' : 'false') + '">' + util.esc(k.name) + '</button>';
+        ' aria-pressed="' + (on ? 'true' : 'false') + '">' +
+        '<svg class="chip__check" aria-hidden="true"><use href="#i-check"/></svg>' +
+        util.esc(k.name) + '</button>';
     }).join('');
   }
 
@@ -132,7 +134,9 @@
         if (!kp) return '';
         var on = selected.indexOf(id) >= 0 ? ' chip--on' : '';
         return '<button type="button" class="chip' + on + '" data-kp="' + util.esc(id) + '"' +
-          ' aria-pressed="' + (on ? 'true' : 'false') + '">' + util.esc(kp.name) + '</button>';
+          ' aria-pressed="' + (on ? 'true' : 'false') + '">' +
+          '<svg class="chip__check" aria-hidden="true"><use href="#i-check"/></svg>' +
+          util.esc(kp.name) + '</button>';
       }).join('') +
       '</div>';
   }
@@ -141,7 +145,9 @@
     return QT.data.REASONS.map(function (r) {
       var on = selected === r.id ? ' chip--on' : '';
       return '<button type="button" class="chip' + on + '" data-reason="' + util.esc(r.id) + '"' +
-        ' aria-pressed="' + (on ? 'true' : 'false') + '">' + util.esc(r.name) + '</button>';
+        ' aria-pressed="' + (on ? 'true' : 'false') + '">' +
+        '<svg class="chip__check" aria-hidden="true"><use href="#i-check"/></svg>' +
+        util.esc(r.name) + '</button>';
     }).join('');
   }
 
@@ -193,7 +199,7 @@
         // —— 知识点（含搜索 + 最近使用）——
         '<div class="card">' +
           '<div class="field">' +
-            '<div class="label">科目</div>' +
+            '<div class="label"><span class="step-badge">2</span>知识点</div>' +
             '<select class="select" id="f-subject">' + subjectOptions(draft.subject) + '</select>' +
           '</div>' +
           '<div class="field" style="margin-bottom:0">' +
@@ -213,7 +219,7 @@
 
         // —— 错因 ——
         '<div class="card">' +
-          '<div class="label">错因</div>' +
+          '<div class="label"><span class="step-badge">3</span>错因</div>' +
           '<div class="chips" id="reason-chips">' + reasonChipsHtml(draft.reason) + '</div>' +
           '<div class="hint">选最主要的一个原因。诊断页会按错因统计你的失分模式。</div>' +
         '</div>' +
