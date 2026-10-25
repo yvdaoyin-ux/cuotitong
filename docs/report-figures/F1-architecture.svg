@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="560" viewBox="0 0 760 560">
+  <rect width="760" height="560" fill="#fff"/>
+  <defs>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#556070"/>
+    </marker>
+  </defs>
+  <text x="380" y="30" font-size="15" font-weight="600" fill="#171C26" text-anchor="middle">错题通 · 系统结构（数据流自上而下）</text>
+  <text x="380" y="50" font-size="12" fill="#556070" text-anchor="middle">纯前端单页应用 · localStorage + IndexedDB · 无服务器</text>
+
+  <!-- 输入层 -->
+  <g font-size="13" fill="#171C26">
+    <rect x="40" y="80" width="150" height="56" rx="10" fill="#ECEEFA" stroke="#3A47B8"/>
+    <text x="115" y="104" text-anchor="middle" font-weight="600">文字录入</text>
+    <text x="115" y="122" text-anchor="middle" font-size="11" fill="#556070">题干/答案/解析</text>
+
+    <rect x="210" y="80" width="150" height="56" rx="10" fill="#ECEEFA" stroke="#3A47B8"/>
+    <text x="285" y="104" text-anchor="middle" font-weight="600">公式工具栏</text>
+    <text x="285" y="122" text-anchor="middle" font-size="11" fill="#556070">94 符号 · insertAt 纯函数</text>
+
+    <rect x="380" y="80" width="150" height="56" rx="10" fill="#ECEEFA" stroke="#3A47B8"/>
+    <text x="455" y="104" text-anchor="middle" font-weight="600">拍照 / 相册</text>
+    <text x="455" y="122" text-anchor="middle" font-size="11" fill="#556070">压缩 长边1280 ≤200KB</text>
+
+    <rect x="550" y="80" width="170" height="56" rx="10" fill="#ECEEFA" stroke="#3A47B8"/>
+    <text x="635" y="104" text-anchor="middle" font-weight="600">可选：文字识别</text>
+    <text x="635" y="122" text-anchor="middle" font-size="11" fill="#556070">glm-ocr · 每日限额 · 口令解锁</text>
+  </g>
+
+  <!-- 录题归一化 -->
+  <rect x="200" y="180" width="360" height="52" rx="10" fill="#fff" stroke="#3A47B8"/>
+  <text x="380" y="202" font-size="13" font-weight="600" fill="#171C26" text-anchor="middle">录题归一化（mathtext.js）</text>
+  <text x="380" y="220" font-size="11" fill="#556070" text-anchor="middle">全角→半角 · \(\)\[\] → $…$ · √→\sqrt · KaTeX 渲染校验</text>
+
+  <!-- 存储 -->
+  <g font-size="13" fill="#171C26">
+    <rect x="120" y="276" width="250" height="60" rx="10" fill="#E6F4EC" stroke="#177A50"/>
+    <text x="245" y="300" text-anchor="middle" font-weight="600">localStorage qt:db（JSON）</text>
+    <text x="245" y="318" text-anchor="middle" font-size="11" fill="#556070">错题 / 知识点 / 作答事件流 · schema v3</text>
+
+    <rect x="420" y="276" width="220" height="60" rx="10" fill="#E6F4EC" stroke="#177A50"/>
+    <text x="530" y="300" text-anchor="middle" font-weight="600">IndexedDB qt-images</text>
+    <text x="530" y="318" text-anchor="middle" font-size="11" fill="#556070">照片 Blob（不进 JSON）</text>
+  </g>
+  <text x="380" y="356" font-size="11" fill="#C0392B" text-anchor="middle">设计约束：掌握度不落盘，永远由事件流实时计算</text>
+
+  <!-- 统计模型 -->
+  <rect x="170" y="374" width="420" height="56" rx="10" fill="#FBF0DD" stroke="#9C5A00"/>
+  <text x="380" y="396" font-size="13" font-weight="600" fill="#171C26" text-anchor="middle">统计模型（stats.js，纯函数）</text>
+  <text x="380" y="414" font-size="11" fill="#556070" text-anchor="middle">贝叶斯平滑 Beta-二项（95% 可信区间） · 遗忘曲线 R=e^(−t/S) · 加权无放回组卷</text>
+
+  <!-- 输出层 -->
+  <g font-size="13" fill="#171C26">
+    <rect x="60" y="470" width="180" height="56" rx="10" fill="#fff" stroke="#3A47B8"/>
+    <text x="150" y="493" text-anchor="middle" font-weight="600">薄弱点诊断</text>
+    <text x="150" y="511" text-anchor="middle" font-size="11" fill="#556070">掌握度排行 · 错因统计</text>
+
+    <rect x="290" y="470" width="180" height="56" rx="10" fill="#fff" stroke="#3A47B8"/>
+    <text x="380" y="493" text-anchor="middle" font-weight="600">智能组卷 / 今日复习</text>
+    <text x="380" y="511" text-anchor="middle" font-size="11" fill="#556070">按薄弱度加权 · 单点 ≤40%</text>
+
+    <rect x="520" y="470" width="180" height="56" rx="10" fill="#fff" stroke="#3A47B8"/>
+    <text x="610" y="493" text-anchor="middle" font-weight="600">打印 / 匿名导出</text>
+    <text x="610" y="511" text-anchor="middle" font-size="11" fill="#556070">白名单计数，绝无题目文本</text>
+  </g>
+
+  <g stroke="#556070" stroke-width="1.4" fill="none" marker-end="url(#ar)">
+    <path d="M115,136 C150,160 220,165 260,180"/>
+    <path d="M285,136 L360,180"/>
+    <path d="M455,136 L420,180"/>
+    <path d="M635,136 C640,160 600,165 520,180"/>
+    <path d="M300,232 L260,276"/>
+    <path d="M460,232 L510,276"/>
+    <path d="M245,336 L300,374"/>
+    <path d="M530,336 L470,374"/>
+    <path d="M260,430 L170,470"/>
+    <path d="M380,430 L380,470"/>
+    <path d="M500,430 L590,470"/>
+  </g>
+</svg>
